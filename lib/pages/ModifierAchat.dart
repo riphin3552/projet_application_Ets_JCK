@@ -252,7 +252,7 @@ void CodeModification(BuildContext context) {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Padding(padding: EdgeInsets.all(16),
+              Padding(padding: EdgeInsets.all(16), //
               
               child: Form(
                 key: _formUpdateKey,
@@ -260,7 +260,7 @@ void CodeModification(BuildContext context) {
                 child: 
                         
                 Card(
-                  elevation: 20,
+                  elevation: 20, // ombre de la carte
                   child: Column(
                     children: [
                       Text("Modifier l'achat", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 15),),

@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    // Le plugin Flutter doit être appliqué après Android et Kotlin
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+
+android {
+    namespace "com.example.sale_manager"
+    compileSdk flutter.compileSdkVersion
+    ndkVersion "27.0.12077973"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    // Charger le fichier key.properties
+    def keystoreProperties = new Properties()
+    def keystoreFile = rootProject.file("key.properties")
+    if (keystoreFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystoreFile))
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.riphin_salemanager.Ets_JCK"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:-unchecked"
+    }
+
+    dependencies {
+    implementation "androidx.window:window:1.1.0"
+    }
+}
+
+flutter {
+    source '../..'
+}

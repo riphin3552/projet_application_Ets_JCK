@@ -341,6 +341,7 @@ if (response.statusCode == 200) {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 63, 129, 86),
+                    minimumSize: Size(double.infinity, 50),
                     padding: EdgeInsets.symmetric(horizontal: 130, vertical: 13),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),

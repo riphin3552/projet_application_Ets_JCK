@@ -166,32 +166,23 @@ class _LoginState extends State<Login> {
                 ElevatedButton(
                   onPressed: () {
                     validationFormulaire();
-                  //  LoginService.loginUser(
-                  //     context,
-                  //     email: _emailController.text,
-                  //     password: _passwordController.text,
-                  //   );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(255, 63, 129, 86),
-                    minimumSize: Size(double.infinity, 50), // Largeur du bouton
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 160,
-                      vertical: 15,
-                    ),
+                    backgroundColor: const Color.fromARGB(255, 63, 129, 86),
+                    minimumSize: const Size(double.infinity, 50),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: 
-                  FittedBox(
-                    fit: BoxFit.scaleDown,  // Ajuste le texte si nécessaire
-                    child: Text(
-                      "Login",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                  child: const Text(
+                    "Login",
+                    style: TextStyle(
+                      
+                      color: Colors.white,
                     ),
                   ),
-                ),
+  ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

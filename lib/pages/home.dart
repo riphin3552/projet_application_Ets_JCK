@@ -44,8 +44,8 @@ class _HomePageState extends State<HomePage> {
 
 //charger le nom de l'utilisateur depuis les shared preferences
   void loadUserName() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('Token') ?? '';
+  final prefs = await SharedPreferences.getInstance(); // obtenir l'instance de SharedPreferences
+  final token = prefs.getString('Token') ?? ''; // récupérer le token stocké
 
   final response = await http.get(
     Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
