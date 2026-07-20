@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 
 
@@ -76,8 +78,8 @@ class _StockProduitsState extends State<StockProduits> {
   
   Future<List<StockItem>> fetchStockData() async {
   final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/getStock.php'),
-    headers: {'Content-Type': 'application/json'},
+    Uri.parse('${AppConfig.apiBaseUrl}/getStock.php'),
+    headers: await Session.authHeaders(),
   );
 
   if (response.statusCode == 200) {

@@ -6,7 +6,10 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:sale_manager/pages/Get_achats.dart';
 //import 'package:sale_manager/pages/TicketAchat.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
+import 'package:sale_manager/offline_queue.dart';
+import 'package:sale_manager/reference_cache.dart';
 
 
 class Operations extends StatefulWidget {
@@ -20,9 +23,11 @@ class _OperationsState extends State<Operations> {
   int? selectedAgriculteurId;
   int? selectedDepotId;
   int? selectedProduitId;
+  int? selectedLotId;
   List<Map<String,dynamic>> agricuculteurs=[];  //1. initialisation de la liste
   List<Map<String,dynamic>> depots=[];
   List<Map<String,dynamic>> produits=[];
+  List<Map<String,dynamic>> lots=[];
 
   int Quantite=0;
   int PrixUnitaire=0;
@@ -44,106 +49,94 @@ class _OperationsState extends State<Operations> {
   final _primeController= TextEditingController();
   final _prixTotalController=TextEditingController();
 
-//2. chargement des donnees dans le dropdowntextformfield
+// Chargement des données de référence : on tente le réseau, on met en
+// cache local dès que ça réussit, et si le réseau échoue (pas de signal sur
+// le terrain), on recharge la dernière copie connue au lieu de laisser le
+// formulaire vide.
   Future<void> fetchAgriculteurs() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_agriculteurs.php'));
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    setState(() {
-      agricuculteurs=List<Map<String,dynamic>>.from(data);
-    });
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/get_agriculteurs.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        await ReferenceCache.save('agriculteurs', donnees);
+        if (mounted) setState(() => agricuculteurs = donnees);
+        return;
+      }
+    } catch (_) {
+      // pas de réseau : on retombe sur le cache ci-dessous
+    }
+    final cache = await ReferenceCache.get('agriculteurs');
+    if (mounted) setState(() => agricuculteurs = cache);
   }
-}
 
-//2. chargement des donnees dans le dropdowntextformfield
 Future<void> fetchDepots() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_depots.php'));
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    setState(() {
-      depots=List<Map<String,dynamic>>.from(data);
-    });
-  }
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/get_depots.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        await ReferenceCache.save('depots', donnees);
+        if (mounted) setState(() => depots = donnees);
+        return;
+      }
+    } catch (_) {}
+    final cache = await ReferenceCache.get('depots');
+    if (mounted) setState(() => depots = cache);
 }
 
 Future<void> fetchProduits() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/getProducts.php'));
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    setState(() {
-      produits=List<Map<String,dynamic>>.from(data);
-    });
-  }
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/getProducts.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        await ReferenceCache.save('produits', donnees);
+        if (mounted) setState(() => produits = donnees);
+        return;
+      }
+    } catch (_) {}
+    final cache = await ReferenceCache.get('produits');
+    if (mounted) setState(() => produits = cache);
 }
 
-//charger l'id de l'utilisateur depuis les shared preferences
-  void loadUserName() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('Token') ?? '';
-
-  final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  );
-
-  final data = jsonDecode(response.body);
-  
-  if (response.statusCode == 200 && data['success'] == true) {
-    if (data['idutilisateur'] != null) {
-      setState(() {
-        IdUtilisateur = data['idutilisateur'];
-      });
-    } else {
-       // ignore: use_build_context_synchronously
-       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: Id utilisateur absent dans la réponse ${data['message']}")),
-      );
-     }
-  } else {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec de validation token: ${data['message']}")),
-    );
-  }
+// Lots ouverts, pour rattacher l'achat à un lot (facultatif)
+Future<void> fetchLots() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/get_lots.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final donnees = List<Map<String, dynamic>>.from(data['data']).where((l) => l['statut'] == 'ouvert').toList();
+          await ReferenceCache.save('lots', donnees);
+          if (mounted) setState(() => lots = donnees);
+          return;
+        }
+      }
+    } catch (_) {}
+    final cache = await ReferenceCache.get('lots');
+    if (mounted) setState(() => lots = cache.where((l) => l['statut'] == 'ouvert').toList());
 }
 
+// L'utilisateur connecté est déjà connu (stocké à la connexion), inutile de
+// rappeler validateToken.php.
+void loadUserName() async {
+  final id = await Session.getIdUtilisateur();
+  setState(() {
+    IdUtilisateur = id == 0 ? null : id;
+  });
+}
 
-
-//charger le nom de l'utilisateur depuis les shared preferences
-  void loadnomUtilisateur() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('Token') ?? '';
-
-  final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  );
-
-  final data = jsonDecode(response.body);
-  
-  if (response.statusCode == 200 && data['success'] == true) {
-    if (data['nomutilisateur'] != null) {
-      setState(() {
-        nomUtilisateur = data['nomutilisateur'];
-      });
-    } else {
-       // ignore: use_build_context_synchronously
-       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: nomutilisateur absent dans la réponse ${data['message']}")),
-      );
-     }
-  } else {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: ${data['message']}")),
-    );
-  }
+void loadnomUtilisateur() async {
+  final nom = await Session.getNomUtilisateur();
+  setState(() {
+    nomUtilisateur = nom;
+  });
 }
 
 
@@ -173,6 +166,7 @@ void initState(){
   fetchAgriculteurs();
   fetchDepots();
   fetchProduits();
+  fetchLots();
   loadUserName();
   loadnomUtilisateur();
   calculateTotalPrice();
@@ -196,26 +190,28 @@ Future<void> enregistrerAchat(
   String nomUtilisateur,
   
 ) async {
+  final achatPayload = {
+    'idcultivateur': selectedAgriculteurId,
+    'idproduit': selectedProduitId,
+    'depot': selectedDepotId,
+    'idLot': selectedLotId,
+    'quantite': quantite,
+    'prixUnitaire': prixUnitaire,
+    'primeplanteur':primeplanteur,
+    'totalpayer': prixTotal,
+    'date': dateAchat,
+    'idutilisateur': idUtilisateur,
+    'uuidClient': OfflineQueue.generateUuid(),
+  };
   try {
     var url = Uri.parse(
-      "https://riphin-salemanager.com/Sale_manager_API/registerOperations.php",
+      "${AppConfig.apiBaseUrl}/registerOperations.php",
     );
     var response = await http
         .post(
           url,
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({
-            'idcultivateur': selectedAgriculteurId,
-            'idproduit': selectedProduitId,
-            'depot': selectedDepotId,
-            'quantite': quantite,
-            'prixUnitaire': prixUnitaire,
-            'primeplanteur':primeplanteur,
-            'totalpayer': prixTotal,
-            'date': dateAchat,
-            'idutilisateur': idUtilisateur,
-            
-          }),
+          headers: await Session.authHeaders(),
+          body: json.encode(achatPayload),
         )
         .timeout(Duration(seconds: 10));
 
@@ -260,10 +256,15 @@ if (response.statusCode == 200) {
   }
 }
   } catch (e) {
+    // Pas de réseau (ou serveur injoignable) : on met l'achat en attente
+    // localement au lieu de le perdre. Il sera synchronisé plus tard via
+    // sync_achats.php (idempotent grâce à uuidClient).
+    await OfflineQueue.add(achatPayload);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Erreur de connexion: $e")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Pas de connexion : achat enregistré localement, il sera synchronisé plus tard")),
+    );
+    resetFields();
   }
 }
 
@@ -333,22 +334,21 @@ void resetFields(){
                 // },
                       TypeAheadField<Map<String, dynamic>>(
   controller: _planteurController,
-  suggestionsCallback: (pattern) async {
-    if (pattern.isEmpty || pattern.length < 2) return []; // ✅ évite les requêtes inutiles
-    
-    final response = await http.post(
-      Uri.parse("https://riphin-salemanager.com/Sale_manager_API/Get_agriculteurBuy_name.php"),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nomplanteur': pattern}),
-    );
+  suggestionsCallback: (pattern) {
+    // Recherche locale sur la liste déjà en mémoire/cache : fonctionne même
+    // sans réseau, et plus réactif qu'un appel serveur à chaque lettre tapée.
+    final recherche = pattern.toLowerCase();
+    final resultats = pattern.isEmpty
+        ? agricuculteurs
+        : agricuculteurs.where((a) => (a['nomAgriculteur'] ?? '').toString().toLowerCase().contains(recherche)).toList();
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      final List<dynamic> data = json['data'];
-      return List<Map<String, dynamic>>.from(data);
-    } else {
-      return [];
+    // Si le planteur recherché n'est pas trouvé, on propose toujours le
+    // planteur de secours (utilisable hors-ligne, à corriger une fois en ligne).
+    final secours = agricuculteurs.where((a) => a['CodePlanteur'] == 'SECOURS').toList();
+    if (resultats.isEmpty && secours.isNotEmpty && pattern.isNotEmpty) {
+      return secours;
     }
+    return resultats;
   },
   builder: (context, controller, focusNode) => TextFormField(
     controller: _planteurController,
@@ -359,6 +359,7 @@ void resetFields(){
       border: OutlineInputBorder(),
       focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color.fromARGB(255, 63, 129, 86))),
       prefixIcon: Icon(Icons.search),
+      helperText: "Planteur introuvable ? Choisissez Plant_secours et corrigez plus tard",
     ),
     validator: (value) {
       if (value == null || value.isEmpty) {
@@ -367,13 +368,25 @@ void resetFields(){
       return null;
     },
   ),
-  itemBuilder: (context, suggestion) => ListTile(
-    title: Text(suggestion['nomAgriculteur']),
-  ),
+  itemBuilder: (context, suggestion) {
+    final estSecours = suggestion['CodePlanteur'] == 'SECOURS';
+    return ListTile(
+      leading: estSecours ? const Icon(Icons.warning_amber, color: Colors.orange) : null,
+      title: Text(suggestion['nomAgriculteur']),
+      subtitle: estSecours ? const Text("Planteur temporaire — à corriger une fois en ligne") : null,
+    );
+  },
   onSelected: (suggestion) {
-    _planteurController.text = suggestion['nomAgriculteur'];
+    final estSecours = suggestion['CodePlanteur'] == 'SECOURS';
+    _planteurController.text = estSecours
+        ? "${suggestion['nomAgriculteur']} (${_planteurController.text.isNotEmpty ? _planteurController.text : 'nom à préciser'})"
+        : suggestion['nomAgriculteur'];
     selectedAgriculteurId = suggestion['idAgriculteur'];
-    print('ID sélectionné : $selectedAgriculteurId');
+    if (estSecours && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Planteur temporaire utilisé — pensez à corriger cet achat une fois en ligne")),
+      );
+    }
   },
 )
 
@@ -500,12 +513,34 @@ void resetFields(){
                 },
                 ),
                 ),
-                
-              
+
+                if (lots.isNotEmpty)
                 Padding(padding: EdgeInsets.all(10),
-                  child: 
+                  child:
+                    DropdownButtonFormField<int>(
+                  value: selectedLotId,
+                  items: lots.map((item){
+                    return DropdownMenuItem<int>(
+                      value: item['id_lot'],
+                      child: Text(item['code_lot']),
+                    );
+                  }).toList(),
+                 onChanged: (newlot) {
+                    setState(() { selectedLotId = newlot; });
+                 },
+                 decoration: InputDecoration(
+                    labelText: "Lot (facultatif)",
+                    labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
+                    hintText: "Rattacher à un lot",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                ),
+
+                Padding(padding: EdgeInsets.all(10),
+                  child:
                     TextFormField(
-                  
+
                   controller: _primeController,
                   decoration: InputDecoration(
                     labelText: "Prime ",

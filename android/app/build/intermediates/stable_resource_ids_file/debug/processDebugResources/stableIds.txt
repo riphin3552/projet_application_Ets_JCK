@@ -1,4 +1,4 @@
-com.riphin_salemanager.Ets_JCK:xml/image_share_filepaths = 0x7f100001
+com.riphin_salemanager.Ets_JCK:xml/image_share_filepaths = 0x7f100002
 com.riphin_salemanager.Ets_JCK:xml/flutter_printing_file_paths = 0x7f100000
 com.riphin_salemanager.Ets_JCK:styleable/Toolbar = 0x7f0f0040
 com.riphin_salemanager.Ets_JCK:styleable/TextAppearance = 0x7f0f003f
@@ -960,6 +960,7 @@ com.riphin_salemanager.Ets_JCK:attr/ratingBarStyleSmall = 0x7f03010a
 com.riphin_salemanager.Ets_JCK:drawable/abc_ic_menu_paste_mtrl_am_alpha = 0x7f07001d
 com.riphin_salemanager.Ets_JCK:dimen/abc_action_bar_default_height_material = 0x7f060002
 com.riphin_salemanager.Ets_JCK:attr/ratingBarStyleIndicator = 0x7f030109
+com.riphin_salemanager.Ets_JCK:xml/flutter_share_file_paths = 0x7f100001
 com.riphin_salemanager.Ets_JCK:attr/subMenuArrow = 0x7f030131
 com.riphin_salemanager.Ets_JCK:color/abc_search_url_text_normal = 0x7f05000d
 com.riphin_salemanager.Ets_JCK:attr/reverseLayout = 0x7f03010b

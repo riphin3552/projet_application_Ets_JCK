@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 class Agriculteurs extends StatefulWidget {
   const Agriculteurs({super.key});
@@ -27,12 +29,12 @@ class _AgriculteursState extends State<Agriculteurs> {
    try{
 
        var url = Uri.parse(
-      "https://riphin-salemanager.com/Sale_manager_API/registerAgriculteur.php",
+      "${AppConfig.apiBaseUrl}/registerAgriculteur.php",
     );
     var response = await http
         .post(
           url,
-          headers: {'Content-Type': 'application/json'},
+          headers: await Session.authHeaders(),
           body: json.encode({
             'nameAgricultor': nom,
             'codeplanteur': codeplanteur,
@@ -84,7 +86,7 @@ class _AgriculteursState extends State<Agriculteurs> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Erreur de connexion: $e")));
+      ).showSnackBar(SnackBar(content: Text("Erreur de connexion")));
     }
   }
 

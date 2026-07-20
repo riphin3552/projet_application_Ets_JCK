@@ -1,6 +1,4 @@
 
-import 'dart:convert';
-
 import 'package:sale_manager/pages/Dilplay_utilisateurs.dart';
 import 'package:sale_manager/pages/Epedition.dart';
 import 'package:sale_manager/pages/GetAll_Achats.dart';
@@ -17,14 +15,23 @@ import 'package:sale_manager/pages/registerProducts.dart';
 import 'package:sale_manager/pages/stockage.dart';
 import 'package:sale_manager/pages/utilisateurs.dart';
 import 'package:sale_manager/pages/operations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sale_manager/pages/lots.dart';
+import 'package:sale_manager/pages/inventaire.dart';
+import 'package:sale_manager/pages/notifications.dart';
+import 'package:sale_manager/pages/dashboard.dart';
+import 'package:sale_manager/pages/export_csv.dart';
+import 'package:sale_manager/pages/securite_2fa.dart';
+import 'package:sale_manager/pages/changer_mot_de_passe.dart';
+import 'package:sale_manager/pages/synchronisation.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-  
+
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -33,48 +40,85 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String nomUtilisateur='';
   String statusUser="";
+  List<String> _permissions = [];
   bool get isConnected=>nomUtilisateur.trim().isNotEmpty;
+  bool _can(String permission) => _permissions.contains(permission);
 
   @override
   void initState(){
     super.initState();
      loadUserName();
-     
+     loadPermissions();
   }
 
-//charger le nom de l'utilisateur depuis les shared preferences
+  // L'utilisateur connecté est déjà connu depuis la connexion, inutile de
+  // rappeler validateToken.php.
   void loadUserName() async {
-  final prefs = await SharedPreferences.getInstance(); // obtenir l'instance de SharedPreferences
-  final token = prefs.getString('Token') ?? ''; // récupérer le token stocké
+    final nom = await Session.getNomUtilisateur();
+    setState(() {
+      nomUtilisateur = nom;
+    });
+  }
 
-  final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  );
+  void loadPermissions() async {
+    final perms = await Session.getPermissions();
+    setState(() {
+      _permissions = perms;
+    });
+  }
 
-  final data = jsonDecode(response.body);
-  
-  if (response.statusCode == 200 && data['success'] == true) {
-    if (data['nomutilisateur'] != null) {
-      setState(() {
-        nomUtilisateur = data['nomutilisateur'];
-      });
-    } else {
-       // ignore: use_build_context_synchronously
-       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: nomutilisateur absent dans la réponse ${data['message']}")),
+  Future<void> logout() async {
+    final headers = await Session.authHeaders();
+    try {
+      await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/deconnexion.php'),
+        headers: headers,
       );
-     }
-  } else {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: ${data['message']}")),
+    } catch (_) {
+      // La déconnexion locale doit réussir même si l'appel réseau échoue
+    }
+    await Session.clear();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => Login()),
+      (route) => false,
     );
   }
-}
+
+  Widget _tile(IconData icon, String label, Widget Function() pageBuilder) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => pageBuilder()));
+      },
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 243, 245, 244),
+          border: Border.all(color: const Color.fromARGB(255, 240, 245, 243)),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              // ignore: deprecated_member_use
+              color: Colors.grey.withOpacity(0.8),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon),
+            const SizedBox(height: 8),
+            Text(label, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
 
 //Pour android seulement
 void openGmailDirect() {
@@ -160,110 +204,6 @@ void sendEmailMultiplatform() async {
 }
 
 
-// code de verification de creation nouvel utilisateur
-void showSaisiePopup(BuildContext context) {
-  TextEditingController _inputController = TextEditingController();
-  const String correctCode = '@2025@'; // Le code correct prédéfini
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text("Saisir le code d'accès"),
-        content: TextField(
-          controller: _inputController,
-          decoration: InputDecoration(
-            hintText: '********',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: Text('Annuler'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            child: Text('Valider'),
-            onPressed: () {
-              final saisie = _inputController.text.trim();
-
-              // 🔍 Vérification simple
-              if (saisie.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Veuillez saisir un code valide')),
-                );
-              } else if (saisie == correctCode) {
-                Navigator.pop(context); // Ferme le popup
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Utilisateurs()),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Code incorrect')),
-                );
-              }
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
-
-
-//popup de saisie du code d'accès
-void showSaisiePopup_StockProduits(BuildContext context) {
-  TextEditingController _inputController = TextEditingController();
-  const String correctCode = '@2025@'; // Le code correct prédéfini
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text("Saisir le code d'accès"),
-        content: TextField(
-          controller: _inputController,
-          decoration: InputDecoration(
-            hintText: '********',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: Text('Annuler'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            child: Text('Valider'),
-            onPressed: () {
-              final saisie = _inputController.text.trim();
-
-              // 🔍 Vérification simple
-              if (saisie.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Veuillez saisir un code valide')),
-                );
-              } else if (saisie == correctCode) {
-                Navigator.pop(context); // Ferme le popup
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => StockProduits()),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Code incorrect')),
-                );
-              }
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
-
-
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
@@ -282,58 +222,24 @@ void showSaisiePopup_StockProduits(BuildContext context) {
 
         actions: [
   PopupMenuButton<String>(
-    onSelected: (value) async {
-      // 🔹 Affiche un popup pour entrer le mot de passe
-      final accessGranted = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final TextEditingController passwordController = TextEditingController();
-          return AlertDialog(
-            title: const Text("Accès sécurisé"),
-            content: TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Mot de passe",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Annuler"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  // 🔹 Vérifie le mot de passe (ici exemple simple)
-                  if (passwordController.text == "@2025@") {
-                    Navigator.pop(context, true); // accès accordé
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Mot de passe incorrect")),
-                    );
-                  }
-                },
-                child: const Text("Valider"),
-              ),
-            ],
-          );
-        },
-      );
-
-      // 🔹 Si mot de passe correct → navigation
-      if (accessGranted == true) {
-        if (value == 'Operations') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => GetAll_Achats()));
-        } else if (value == 'Tous les Stocks') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => StockProduits()));
-        } else if (value == 'Utilisateurs') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => Afficher_Utilisateurs()));
-        }
+    onSelected: (value) {
+      // L'accès est déjà garanti par le filtrage des options ci-dessous
+      // (chaque entrée n'apparaît que si l'utilisateur a le privilège requis).
+      if (value == 'Operations') {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => GetAll_Achats()));
+      } else if (value == 'Tous les Stocks') {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => StockProduits()));
+      } else if (value == 'Utilisateurs') {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => Afficher_Utilisateurs()));
       }
     },
     itemBuilder: (BuildContext context) {
-      return {'Operations', 'Tous les Stocks', 'Utilisateurs'}.map((String choice) {
+      final options = <String>[
+        if (_can('achats.voir')) 'Operations',
+        if (_can('depots.voir')) 'Tous les Stocks',
+        if (_can('utilisateurs.voir')) 'Utilisateurs',
+      ];
+      return options.map((String choice) {
         return PopupMenuItem<String>(
           value: choice,
           child: Text(choice),
@@ -382,36 +288,6 @@ void showSaisiePopup_StockProduits(BuildContext context) {
               ],
             ),
             
-            // ListTile(
-            //   title: Text("Ajouter Utilisateur"),
-            //   leading: Icon(Icons.person_add),
-            //   onTap: () {
-            //     Navigator.push(context, MaterialPageRoute(builder: (context) => Utilisateurs()));
-            //   },
-            // ),
-            // ListTile(title: Text("Ajouter Planteur"),
-            // leading: Icon(Icons.person_add),
-            // onTap: () {
-            //   Navigator.push(context, MaterialPageRoute(builder: (context)=>Agriculteurs()));
-            // },),
-            // ListTile(title: Text("Actionnaires"), leading: Icon(Icons.group),
-            // onTap: () {
-            //   Navigator.push(context, MaterialPageRoute(builder:  (context) => Actionnaires()));
-            // },
-            // ),
-            // ListTile(
-            //   title: Text("Stockage"),
-            //   onTap: () {
-            //     Navigator.push(context, MaterialPageRoute(builder: (context) => Stockage()));
-            //   },
-            // ),
-            // ListTile(
-            //   title: Text("Operations"),
-            //   leading: Icon(Icons.add_business),
-            //   onTap: () {
-            //     Navigator.push(context, MaterialPageRoute(builder: (context) => Operations()));
-            //   },
-            // ),
             ListTile(title: Text("Parametres"), leading: Icon(Icons.settings)),
             ListTile(title: Text("Contact"), leading: Icon(Icons.contact_mail),
               onTap: sendEmailMultiplatform,
@@ -419,7 +295,7 @@ void showSaisiePopup_StockProduits(BuildContext context) {
             ListTile(title: Text("Deconnexion"), leading: Icon(Icons.logout),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+                logout();
               },
             ),
 
@@ -456,11 +332,12 @@ void showSaisiePopup_StockProduits(BuildContext context) {
         
         children: [
           // Removed invalid BorderRadius.circular(4.0)
+          if (_can('utilisateurs.gerer'))
           GestureDetector(
             onTap: () {
-              showSaisiePopup(context);
-            }, 
-            child: 
+              Navigator.push(context, MaterialPageRoute(builder: (context) => Utilisateurs()));
+            },
+            child:
           Container(
             
             width: 120,
@@ -492,10 +369,11 @@ void showSaisiePopup_StockProduits(BuildContext context) {
           ),
         
         
+          if (_can('agriculteurs.gerer'))
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => Agriculteurs()));
-            }, 
+            },
             child:
           Container(
             width: 120,
@@ -524,10 +402,11 @@ void showSaisiePopup_StockProduits(BuildContext context) {
         ),
              ),
         
+            if (_can('depots.gerer'))
             GestureDetector(onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => Stockage()));
             },
-            
+
         child: Container(
             width: 120,
             height: 120,
@@ -555,10 +434,11 @@ void showSaisiePopup_StockProduits(BuildContext context) {
           ),
             ),
         
+          if (_can('produits.gerer'))
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => Produits()));
-            }, 
+            },
             child:
           Container(
             width: 120,
@@ -587,10 +467,11 @@ void showSaisiePopup_StockProduits(BuildContext context) {
           ),
           ),
         
+          if (_can('achats.creer'))
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => Operations()));
-            }, 
+            },
             child:
           Container(
             width: 120,
@@ -619,10 +500,11 @@ void showSaisiePopup_StockProduits(BuildContext context) {
           ),
           ),
         
+          if (_can('achats.voir'))
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => GetAchats(nomUtilisateur: nomUtilisateur,)));
-            }, 
+            },
             child:Container(
             width: 120,
             height: 120,
@@ -649,9 +531,10 @@ void showSaisiePopup_StockProduits(BuildContext context) {
           ),
           ),
           
+          if (_can('depots.voir'))
           GestureDetector(
             onTap: () {
-              showSaisiePopup_StockProduits(context);
+              Navigator.push(context, MaterialPageRoute(builder: (context) => StockProduits()));
             },
             child: Container(
             width: 120,
@@ -681,6 +564,7 @@ void showSaisiePopup_StockProduits(BuildContext context) {
         
           ),
         
+          if (_can('expeditions.gerer'))
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => EXPEDICTION()));
@@ -710,25 +594,14 @@ void showSaisiePopup_StockProduits(BuildContext context) {
                   ],)
             ),
           ),
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 243, 245, 244),
-              border: Border.all(color: const Color.fromARGB(255, 240, 245, 243)),
-              borderRadius: BorderRadius.circular(10),
-             boxShadow: [
-              BoxShadow(
-                // ignore: deprecated_member_use
-                color: Colors.grey.withOpacity(0.8),
-                spreadRadius: 2,
-                blurRadius: 5,
-                offset: Offset(0, 3), // changes position of shadow
-              ),
-             ]),
-             child: Text("Soon...", textAlign: TextAlign.center,style: TextStyle(color: Colors.red),),
-          ),
-          
+          if (_can('lots.voir')) _tile(Icons.category, "Lots", () => const LotsPage()),
+          if (_can('inventaires.voir')) _tile(Icons.fact_check, "Inventaire", () => const InventairePage()),
+          if (_can('notifications.voir')) _tile(Icons.notifications, "Notifications", () => const NotificationsPage()),
+          if (_can('rapports.voir')) _tile(Icons.dashboard, "Tableau de bord", () => const DashboardPage()),
+          if (_can('export.voir')) _tile(Icons.file_download, "Export CSV", () => const ExportCsvPage()),
+          _tile(Icons.security, "Sécurité (2FA)", () => const Securite2FAPage()),
+          _tile(Icons.password, "Mot de passe", () => const ChangerMotDePassePage()),
+          _tile(Icons.sync, "Synchronisation", () => const SynchronisationPage()),
         ],
             ),
             ),

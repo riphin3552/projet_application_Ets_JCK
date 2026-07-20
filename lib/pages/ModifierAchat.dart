@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
+import 'package:sale_manager/reference_cache.dart';
 
 class ModifierAchat extends StatefulWidget {
    ModifierAchat({required this.achatData});
@@ -33,27 +36,37 @@ class _ModifierAchatState extends State<ModifierAchat> {
 final _formUpdateKey=GlobalKey<FormState>();
 
 
-//2. chargement des donnees dans le dropdowntextformfield
+// Repli sur le cache local si le réseau échoue (hors-ligne sur le terrain)
   Future<void> fetchAgriculteurs() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_agriculteurs.php'));
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    setState(() {
-      agriculteurs=List<Map<String,dynamic>>.from(data);
-    });
-  }
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/get_agriculteurs.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        await ReferenceCache.save('agriculteurs', donnees);
+        if (mounted) setState(() => agriculteurs = donnees);
+        return;
+      }
+    } catch (_) {}
+    final cache = await ReferenceCache.get('agriculteurs');
+    if (mounted) setState(() => agriculteurs = cache);
 }
 
-//2. chargement des donnees dans le dropdowntextformfield
 Future<void> fetchDepots() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_depots.php'));
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    setState(() {
-      depots=List<Map<String,dynamic>>.from(data);
-      print(depots);
-    });
-  }
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/get_depots.php'), headers: await Session.authHeaders())
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        await ReferenceCache.save('depots', donnees);
+        if (mounted) setState(() => depots = donnees);
+        return;
+      }
+    } catch (_) {}
+    final cache = await ReferenceCache.get('depots');
+    if (mounted) setState(() => depots = cache);
 }
 
 
@@ -102,11 +115,11 @@ Future<void> UpdateAchat(
 
 ) async{
   try{
-    var url= Uri.parse("https://riphin-salemanager.com/Sale_manager_API/updateAchat.php");
+    var url= Uri.parse("${AppConfig.apiBaseUrl}/updateAchat.php");
     var response=await http.post(
-      
+
       url,
-      headers: {'Content-Type':'application/json'},
+      headers: await Session.authHeaders(),
       body: json.encode({
         'idAchat': Idachat.toString(),
         'ancienIdproduit': ancienIdProduit,
@@ -161,7 +174,7 @@ if (response.statusCode == 200) {
       if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text("Erreur de connexion: $e")));
+    ).showSnackBar(SnackBar(content: Text("Erreur de connexion")));
   }
 
 }
@@ -303,22 +316,13 @@ void CodeModification(BuildContext context) {
                       child: 
                      TypeAheadField<Map<String, dynamic>>(
   controller: _planteurController,
-  suggestionsCallback: (pattern) async {
-    if (pattern.isEmpty || pattern.length < 2) return [];
-
-    final response = await http.post(
-      Uri.parse("https://riphin-salemanager.com/Sale_manager_API/Get_agriculteurBuy_name.php"),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nomplanteur': pattern}),
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      final List<dynamic> data = json['data'];
-      return List<Map<String, dynamic>>.from(data);
-    } else {
-      return [];
-    }
+  suggestionsCallback: (pattern) {
+    // Recherche locale (fonctionne aussi hors-ligne) sur la liste déjà chargée
+    if (pattern.isEmpty) return agriculteurs;
+    final recherche = pattern.toLowerCase();
+    return agriculteurs
+        .where((a) => (a['nomAgriculteur'] ?? '').toString().toLowerCase().contains(recherche))
+        .toList();
   },
   builder: (context, controller, focusNode) => TextFormField(
     controller: _planteurController,

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
+import 'package:sale_manager/pages/gestion_utilisateur.dart';
 
 class Afficher_Utilisateurs extends StatefulWidget {
   const Afficher_Utilisateurs({super.key});
@@ -9,39 +12,13 @@ class Afficher_Utilisateurs extends StatefulWidget {
   State<Afficher_Utilisateurs> createState() => _Afficher_UtilisateursState();
 }
 
-class UtilisateursSysteme {
-  final String nomUtilisateur;
-  final String emailUtilisateur;
-  final String motDePasseUtilisateur;
-  final String telephoneUtilisateur;
-  final String descriptionUtilisateur;
-  final String affectationUtilisateur;
-
-  UtilisateursSysteme({
-    required this.nomUtilisateur,
-    required this.emailUtilisateur,
-    required this.motDePasseUtilisateur,
-    required this.telephoneUtilisateur,
-    required this.descriptionUtilisateur,
-    required this.affectationUtilisateur,
-  });
-
-  factory UtilisateursSysteme.fromJson(Map<String, dynamic> json) {
-    return UtilisateursSysteme(
-      nomUtilisateur: json['nomutilisateur']?.toString() ?? "",
-      emailUtilisateur: json['Email']?.toString() ?? "",
-      motDePasseUtilisateur: json['Motdepass']?.toString() ?? "",
-      telephoneUtilisateur: json['phoneUser']?.toString() ?? "",
-      descriptionUtilisateur: json['DescriptionUtilisateur']?.toString() ?? "",
-      affectationUtilisateur: json['CodeDepot']?.toString() ?? "",
-    );
-  }
-}
-
 class UtilisateursTable extends StatelessWidget {
-  final List<UtilisateursSysteme> utilisateurs;
+  final List<Map<String, dynamic>> utilisateurs;
+  final void Function(Map<String, dynamic>) onTapUser;
 
-  const UtilisateursTable({required this.utilisateurs});
+  const UtilisateursTable({super.key, required this.utilisateurs, required this.onTapUser});
+
+  String _s(Map<String, dynamic> u, String key) => (u[key]?.toString().isNotEmpty ?? false) ? u[key].toString() : "N/A";
 
   @override
   Widget build(BuildContext context) {
@@ -51,20 +28,25 @@ class UtilisateursTable extends StatelessWidget {
         columns: const [
           DataColumn(label: Text('Nom', style: TextStyle(fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.bold))),
-          DataColumn(label: Text('Password', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Rôle', style: TextStyle(fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Téléphone', style: TextStyle(fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Description', style: TextStyle(fontWeight: FontWeight.bold))),
           DataColumn(label: Text('Affectation', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Statut', style: TextStyle(fontWeight: FontWeight.bold))),
         ],
-        rows: utilisateurs.map((utilisateur) {
-          return DataRow(cells: [
-            DataCell(Text(utilisateur.nomUtilisateur.isNotEmpty ? utilisateur.nomUtilisateur : "N/A")),
-            DataCell(Text(utilisateur.emailUtilisateur.isNotEmpty ? utilisateur.emailUtilisateur : "N/A")),
-            DataCell(Text(utilisateur.motDePasseUtilisateur.isNotEmpty ? utilisateur.motDePasseUtilisateur : "N/A")),
-            DataCell(Text(utilisateur.telephoneUtilisateur.isNotEmpty ? utilisateur.telephoneUtilisateur : "N/A")),
-            DataCell(Text(utilisateur.descriptionUtilisateur.isNotEmpty ? utilisateur.descriptionUtilisateur : "N/A")),
-            DataCell(Text(utilisateur.affectationUtilisateur.isNotEmpty ? utilisateur.affectationUtilisateur : "N/A")),
-          ]);
+        rows: utilisateurs.map((u) {
+          return DataRow(
+            onSelectChanged: (_) => onTapUser(u),
+            cells: [
+              DataCell(Text(_s(u, 'nomutilisateur'))),
+              DataCell(Text(_s(u, 'Email'))),
+              DataCell(Text(_s(u, 'nom_role'))),
+              DataCell(Text(_s(u, 'phoneUser'))),
+              DataCell(Text(_s(u, 'DescriptionUtilisateur'))),
+              DataCell(Text(_s(u, 'CodeDepot'))),
+              DataCell(Text(_s(u, 'Statut'))),
+            ],
+          );
         }).toList(),
       ),
     );
@@ -72,7 +54,7 @@ class UtilisateursTable extends StatelessWidget {
 }
 
 class _Afficher_UtilisateursState extends State<Afficher_Utilisateurs> {
-  late Future<List<UtilisateursSysteme>> utilisateurs;
+  late Future<List<Map<String, dynamic>>> utilisateurs;
 
   @override
   void initState() {
@@ -80,17 +62,16 @@ class _Afficher_UtilisateursState extends State<Afficher_Utilisateurs> {
     utilisateurs = fetchUtilisateurs();
   }
 
-  Future<List<UtilisateursSysteme>> fetchUtilisateurs() async {
+  Future<List<Map<String, dynamic>>> fetchUtilisateurs() async {
     final response = await http.get(
-      Uri.parse('https://riphin-salemanager.com/Sale_manager_API/Get_Utilisateurs.php'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('${AppConfig.apiBaseUrl}/Get_Utilisateurs.php'),
+      headers: await Session.authHeaders(),
     );
 
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
       if (jsonData['success'] == true) {
-        List<dynamic> data = jsonData['data'];
-        return data.map((item) => UtilisateursSysteme.fromJson(item)).toList();
+        return List<Map<String, dynamic>>.from(jsonData['data']);
       } else {
         throw Exception('Aucune donnée disponible');
       }
@@ -106,7 +87,7 @@ class _Afficher_UtilisateursState extends State<Afficher_Utilisateurs> {
         backgroundColor: Color.fromARGB(255, 63, 129, 86),
         title: const Text('Liste des Utilisateurs',style: TextStyle(color: Colors.white),),
       ),
-      body: FutureBuilder<List<UtilisateursSysteme>>(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: utilisateurs,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -116,7 +97,15 @@ class _Afficher_UtilisateursState extends State<Afficher_Utilisateurs> {
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('Aucun utilisateur trouvé.'));
           } else {
-            return UtilisateursTable(utilisateurs: snapshot.data!);
+            return UtilisateursTable(
+              utilisateurs: snapshot.data!,
+              onTapUser: (u) async {
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => GestionUtilisateurPage(utilisateur: u)));
+                setState(() {
+                  utilisateurs = fetchUtilisateurs();
+                });
+              },
+            );
           }
         },
       ),

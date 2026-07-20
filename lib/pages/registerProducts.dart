@@ -4,6 +4,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 class Produits extends StatefulWidget {
   const Produits({super.key});
@@ -24,10 +26,10 @@ Future<void> addProduit(
     double Quantite,
   ) async {
         // Implémentez la logique pour ajouter un produit ici
-        var url = Uri.parse('https://riphin-salemanager.com/Sale_manager_API/registerProducts.php');
+        var url = Uri.parse('${AppConfig.apiBaseUrl}/registerProducts.php');
         var response = await http.post(
           url,
-          headers: {'Content-Type': 'application/json'},
+          headers: await Session.authHeaders(),
           body: json.encode({
             'nameproduct': nomProduit,
             'descriptionproduct': descriptionProduit,

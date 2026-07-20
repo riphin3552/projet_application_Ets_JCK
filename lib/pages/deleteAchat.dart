@@ -3,6 +3,8 @@ import 'dart:convert';
 import'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 
 class DeleteAchat extends StatefulWidget {
@@ -55,11 +57,11 @@ Future<void> DeleteAchat(
 
 ) async{
   try{
-    var url= Uri.parse("https://riphin-salemanager.com/Sale_manager_API/deleteAchat.php");
+    var url= Uri.parse("${AppConfig.apiBaseUrl}/deleteAchat.php");
     var response=await http.post(
-      
+
       url,
-      headers: {'Content-Type':'application/json'},
+      headers: await Session.authHeaders(),
       body: json.encode({
         'idAchat': Idachat,
         'ancienIdproduit': ancienIdProduit,
@@ -108,7 +110,7 @@ if (response.statusCode == 200) {
       if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text("Erreur de connexion: $e")));
+    ).showSnackBar(SnackBar(content: Text("Erreur de connexion")));
   }
 
 }

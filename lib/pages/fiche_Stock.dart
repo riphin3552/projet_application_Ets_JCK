@@ -4,7 +4,8 @@ import 'package:sale_manager/pages/export_pdf_page.dart';
 import 'dart:convert';
 import 'dart:async';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 
 class FicheStockPage extends StatefulWidget {
@@ -22,7 +23,7 @@ class _FicheStockPageState extends State<FicheStockPage> {
   DateTime? endDate;
 
   Future<void> fetchStockData() async {
-    if (startDate == null || endDate == null) return;
+    if (startDate == null || endDate == null || IdDepot == null) return;
 
     setState(() => loading = true);
 
@@ -30,11 +31,11 @@ class _FicheStockPageState extends State<FicheStockPage> {
     final end = endDate!.toIso8601String().split('T').first;
 
     final url = Uri.parse(
-      "https://riphin-salemanager.com/Sale_manager_API/ficheStock.php"
-      "?id=10&start=$start&end=$end",
+      "${AppConfig.apiBaseUrl}/ficheStock.php"
+      "?id=$IdDepot&start=$start&end=$end",
     );
 
-    final response = await http.get(url);
+    final response = await http.get(url, headers: await Session.authHeaders());
 
     if (response.statusCode == 200) {
       final body = utf8.decode(response.bodyBytes);
@@ -76,79 +77,20 @@ class _FicheStockPageState extends State<FicheStockPage> {
 
 
 
-  // charger le nom d'utilisateur à partir du token
- void loadUsername() async {
-
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('Token') ?? '';
-
-  final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  );
-
-  final data = jsonDecode(response.body);
-  
-  if (response.statusCode == 200 && data['success'] == true) {
-    if (data['nomutilisateur'] != null) {
-      setState(() {
-        nomutilisateur = data['nomutilisateur'];
-      });
-    } else {
-       // ignore: use_build_context_synchronously
-       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: Id de depot absent dans la réponse ${data['message']}")),
-      );
-     }
-  } else {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec de validation token: ${data['message']}")),
-    );
+  // L'utilisateur connecté et son dépôt sont déjà connus depuis la connexion.
+  void loadUsername() async {
+    final nom = await Session.getNomUtilisateur();
+    setState(() => nomutilisateur = nom);
   }
-}
 
-
-// charger IdDepot à partir du token
-void loadIdepot() async {
-
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('Token') ?? '';
-
-  final response = await http.get(
-    Uri.parse('https://riphin-salemanager.com/Sale_manager_API/validateToken.php'),
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  );
-
-  final data = jsonDecode(response.body);
-  
-  if (response.statusCode == 200 && data['success'] == true) {
-    if (data['idstockage'] != null) {
-      setState(() {
-        IdDepot = data['idstockage'];
-      });
-    } else {
-       // ignore: use_build_context_synchronously
-       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec: Id de depot absent dans la réponse ${data['message']}")),
-      );
-     }
-  } else {
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Échec de validation token: ${data['message']}")),
-    );
+  void loadIdepot() async {
+    final idDepot = await Session.getIdStockage();
+    setState(() => IdDepot = idDepot);
+    fetchStockData();
   }
-}
 
-
-void initState() {
+  @override
+  void initState() {
     super.initState();
     loadUsername();
     loadIdepot();

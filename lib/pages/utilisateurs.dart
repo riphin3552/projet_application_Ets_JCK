@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 class Utilisateurs extends StatefulWidget {
   const Utilisateurs({super.key});
@@ -22,25 +24,47 @@ class _UtilisateursState extends State<Utilisateurs> {
   final _telephoneUtilisateur =
       TextEditingController(); // controlleur du champ confirm password
 
-    final  FocusNode _myFocusNodeNomutilisateur = FocusNode(); 
+    final  FocusNode _myFocusNodeNomutilisateur = FocusNode();
     List<Map<String,dynamic>> depots=[];
+    List<Map<String,dynamic>> roles=[];
     int ? selectedDepotId;
+    int ? selectedRoleId;
 
 
     @override
   void initState() {
     super.initState();
-    fetchDepots(); // Charger les données au démarrage  
+    fetchDepots(); // Charger les données au démarrage
+    fetchRoles();
   }
 
     //2. chargement des donnees dans le dropdowntextformfield
 Future<void> fetchDepots() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_depots.php'));
+  final response = await http.get(
+    Uri.parse('${AppConfig.apiBaseUrl}/get_depots.php'),
+    headers: await Session.authHeaders(),
+  );
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     setState(() {
       depots=List<Map<String,dynamic>>.from(data);
     });
+  }
+}
+
+// chargement des rôles disponibles pour l'entreprise
+Future<void> fetchRoles() async {
+  final response = await http.get(
+    Uri.parse('${AppConfig.apiBaseUrl}/get_roles.php'),
+    headers: await Session.authHeaders(),
+  );
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      setState(() {
+        roles = List<Map<String, dynamic>>.from(data['data']);
+      });
+    }
   }
 }
 
@@ -52,17 +76,18 @@ Future<void> fetchDepots() async {
     String telephone,
     String descriptionUtilisateur,
     SelectedDepotId,
+    SelectedRoleId,
   ) async {
     try {
       var url = Uri.parse(
-        'https://riphin-salemanager.com/Sale_manager_API/registerUser.php',
+        '${AppConfig.apiBaseUrl}/registerUser.php',
       );
 
       var response = await http
           .post(
             // ✅ POST method
             url,
-            headers: {'Content-Type': 'application/json'},
+            headers: await Session.authHeaders(),
             body: json.encode({
               // ✅ Données dans le body
               'nameUser': nom,
@@ -71,6 +96,7 @@ Future<void> fetchDepots() async {
               'phoneUser': telephone,
               'descriptionUser': descriptionUtilisateur,
               'DepotId': SelectedDepotId,
+              'idRole': SelectedRoleId,
             }),
           )
           .timeout(Duration(seconds: 10));
@@ -116,7 +142,7 @@ if (response.statusCode == 200) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Erreur de connexion: $e")));
+      ).showSnackBar(SnackBar(content: Text("Erreur de connexion")));
     }
   }
 
@@ -295,8 +321,38 @@ if (response.statusCode == 200) {
                 ),
 
                 Padding(padding: EdgeInsets.all(10),
-                  child: 
-                    DropdownButtonFormField(
+                  child:
+                    DropdownButtonFormField<int>(
+                // ignore: deprecated_member_use
+                value: selectedRoleId,
+                items: roles.map((item){
+                  return DropdownMenuItem<int>(
+                    value: item['id_role'],
+                    child: Text(item['nom_role']),
+                  );
+                }).toList(),
+               onChanged: (newRole) {
+                  setState(() { selectedRoleId = newRole; });
+               },
+               decoration: InputDecoration(
+                  labelText: "Rôle",
+                  labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
+                  hintText: "Rôle de l'utilisateur",
+                  border: OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color.fromARGB(255, 63, 129, 86)))
+                ),
+                validator: (value) {
+                  if(value == null){
+                      return "Veuillez sélectionner un rôle";
+                  }
+                  return null;
+                },
+                ),
+                ),
+
+                Padding(padding: EdgeInsets.all(10),
+                  child:
+                    DropdownButtonFormField<int>(
                 // ignore: deprecated_member_use
                 value: selectedDepotId,
                 items: depots.map((item){
@@ -306,37 +362,32 @@ if (response.statusCode == 200) {
                   );
                 }).toList(),
                onChanged: (newdepot) {
-                  selectedDepotId=newdepot;
+                  setState(() { selectedDepotId = newdepot; });
                },
-               
+
                decoration: InputDecoration(
-                  labelText: "Affectation au depôt.",
+                  labelText: "Affectation au dépôt (optionnel pour DG/Caissier/Comptable)",
                   labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
                   hintText: "Depots",
                   border: OutlineInputBorder(),
                   focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color.fromARGB(255, 63, 129, 86)))
                 ),
-                validator: (value) {
-                  if(value == null){
-                      return "Veuillez selectionnez un depot";
-                  }
-                  return null;
-                },
                 ),
                 ),
 
                 Padding(padding: EdgeInsets.all(10),
-                  child: 
+                  child:
                     ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                         addUser(
-                        _nomutilisateurController.text, 
+                        _nomutilisateurController.text,
                         _emailutilisateurController.text,
-                        _passwordController.text, 
+                        _passwordController.text,
                         _telephoneUtilisateur.text,
                         _descriptionController.text,
-                        selectedDepotId,);
+                        selectedDepotId,
+                        selectedRoleId,);
                       }
                   },
                   style: ElevatedButton.styleFrom(

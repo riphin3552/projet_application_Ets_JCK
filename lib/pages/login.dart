@@ -1,12 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-//import 'package:sale_manager/LoginService.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-//import 'dart:async';
+import 'package:sale_manager/config.dart';
 import 'package:sale_manager/pages/home.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sale_manager/pages/two_factor.dart';
+import 'package:sale_manager/pages/register_entreprise.dart';
+import 'package:sale_manager/session.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -16,11 +17,12 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
+  bool _connexionEnCours = false;
+
   void loginApp(String email, String password) async {
+  setState(() => _connexionEnCours = true);
   try {
-    var url = Uri.parse(
-      'https://riphin-salemanager.com/Sale_manager_API/connexion.php',
-    );
+    var url = Uri.parse('${AppConfig.apiBaseUrl}/connexion.php');
 
     var response = await http
         .post(
@@ -35,20 +37,34 @@ class _LoginState extends State<Login> {
 
     if (!mounted) return;
 
-    if (response.statusCode == 200) {
-      var jsonResponse = jsonDecode(response.body);
-      //print(jsonResponse); // 🔍 pour debug
+    // Le serveur répond toujours en JSON, y compris pour les erreurs
+    // (401 identifiants incorrects, 403 compte désactivé...). On lit donc
+    // le message renvoyé plutôt que de se fier uniquement au code HTTP.
+    Map<String, dynamic>? jsonResponse;
+    try {
+      jsonResponse = jsonDecode(response.body);
+    } catch (_) {
+      jsonResponse = null;
+    }
+
+    if (jsonResponse != null) {
+      if (jsonResponse['success'] == true && jsonResponse['requires2FA'] == true) {
+        final tempToken = jsonResponse['tempToken'];
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TwoFactorScreen(tempToken: tempToken),
+          ),
+        );
+        return;
+      }
 
       if (jsonResponse['success'] == true) {
-        final token = jsonResponse['user']['Token'];
+        final user = jsonResponse['user'];
+        final token = user['Token'];
 
         if (token != null && token is String && token.isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('Token', token);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Connexion réussie")),
-          );
+          await Session.save(user);
 
           Navigator.push(
             context,
@@ -72,8 +88,10 @@ class _LoginState extends State<Login> {
   } catch (e) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Erreur de connexion : $e")),
+      SnackBar(content: Text("Erreur de connexion")),
     );
+  } finally {
+    if (mounted) setState(() => _connexionEnCours = false);
   }
 }
 
@@ -164,9 +182,11 @@ class _LoginState extends State<Login> {
                 ),
                 SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
-                    validationFormulaire();
-                  },
+                  onPressed: _connexionEnCours
+                      ? null
+                      : () {
+                          validationFormulaire();
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 63, 129, 86),
                     minimumSize: const Size(double.infinity, 50),
@@ -175,19 +195,28 @@ class _LoginState extends State<Login> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(
-                      
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _connexionEnCours
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          "Login",
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
   ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Vous n'avez pas de compte?"),
-                    TextButton(onPressed: () {}, child: Text("S'inscrire")),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterEntreprisePage()));
+                      },
+                      child: Text("Créer un compte entreprise"),
+                    ),
                   ],
                 ),
               ],

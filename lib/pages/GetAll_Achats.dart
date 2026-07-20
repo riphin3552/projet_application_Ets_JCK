@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sale_manager/pages/ModifierAchat.dart';
-import 'package:sale_manager/pages/TicketAchat.dart';
 import 'package:sale_manager/pages/deleteAchat.dart';
+import 'package:sale_manager/pages/paiements.dart';
+import 'package:sale_manager/pages/ticket_preview.dart';
+import 'package:sale_manager/quick_pay.dart';
+import 'package:sale_manager/session.dart';
+import 'package:sale_manager/config.dart';
 
 
 
@@ -89,7 +93,10 @@ class _GetAll_AchatsState extends State<GetAll_Achats> {
 
 //chargement des donnees dans le dropdowntextformfield
 Future<void> fetchDepots() async {
-  final response = await http.get(Uri.parse('https://riphin-salemanager.com/Sale_manager_API/get_depots.php'));
+  final response = await http.get(
+    Uri.parse('${AppConfig.apiBaseUrl}/get_depots.php'),
+    headers: await Session.authHeaders(),
+  );
   if (response.statusCode == 200) {
     final List data = jsonDecode(response.body);
     setState(() {
@@ -106,10 +113,8 @@ Future<void> loadAchats() async {
 
   try {
     final response = await http.post(
-      Uri.parse('https://riphin-salemanager.com/Sale_manager_API/GetAll_Achats.php'),
-      headers: {'Content-Type': 'application/json'},
-      
-      
+      Uri.parse('${AppConfig.apiBaseUrl}/GetAll_Achats.php'),
+      headers: await Session.authHeaders(),
     ).timeout(const Duration(seconds: 3));
 
     final data = jsonDecode(response.body);
@@ -137,7 +142,7 @@ Future<void> loadAchats() async {
   } catch (e) {
     await Future.delayed(const Duration(seconds: 2));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Erreur de connexion: $e")),
+      SnackBar(content: Text("Erreur de connexion")),
     );
     setState(() {
       isLoading = false;
@@ -367,12 +372,28 @@ Widget build(BuildContext context) {
                                           ListTile(
                                             leading: Icon(Icons.print, color: Colors.black),
                                             title: Text('Imprimer le ticket', style: TextStyle(color: Colors.black),),
-                                            onTap: () async {
-                                              // Implémentez la logique d'impression ici
-                                              //Navigator.pop(conttext);
-                                              await generateAchatPdf(achat);
+                                            onTap: () {
+                                              Navigator.pop(conttext);
+                                              Navigator.push(context, MaterialPageRoute(builder: (context) => TicketPreviewPage(achat: achat)));
+                                            },
+                                          ),
 
-                                              
+                                          ListTile(
+                                            leading: Icon(Icons.payments, color: Colors.green),
+                                            title: Text('Paiements', style: TextStyle(color: Colors.green),),
+                                            onTap: () {
+                                              Navigator.push(context, MaterialPageRoute(builder: (context)=>PaiementsPage(achatData: achat)),);
+                                            },
+                                          ),
+
+                                          if (achat['StatutPaiement'] != 'paye')
+                                          ListTile(
+                                            leading: Icon(Icons.check_circle, color: Colors.teal),
+                                            title: Text('Payer', style: TextStyle(color: Colors.teal),),
+                                            onTap: () async {
+                                              Navigator.pop(conttext);
+                                              final paye = await payerSolde(context, achat);
+                                              if (paye) loadAchats();
                                             },
                                           ),
 
@@ -389,9 +410,15 @@ Widget build(BuildContext context) {
                                   });
                                 },
 
-                                title: Text(
-                                  '${achat['dateAchat']}',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      '${achat['dateAchat']}',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    SizedBox(width: 8),
+                                    badgeStatutPaiement(achat),
+                                  ],
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,6 +439,7 @@ Widget build(BuildContext context) {
                                           color: Color.fromARGB(255, 174, 82, 25),
                                           fontSize: 15),
                                     ),
+                                    ligneSoldePaiement(achat),
                                   ],
                                 ),
                               ),

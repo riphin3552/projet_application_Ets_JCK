@@ -8,9 +8,9 @@ class AppConfig {
   static String get apiBaseUrl {
     switch (env) {
       case Environment.devPC:
-        return "http://localhost/Sale_manager_API"; // sur émulateur ou PC
+        return "http://localhost:8099/Sale_manager_API"; // serveur PHP local (php -S)
       case Environment.devMobile:
-        return "http://192.168.1.4/Sale_manager_API"; // sur téléphone réel
+        return "http://10.0.2.2:8099/Sale_manager_API"; // 10.0.2.2 = hôte, vu depuis l'émulateur Android
       case Environment.prod:
         return "https://riphin-salemanager.com/Sale_manager_API"; // futur serveur en ligne
     }
