@@ -8,6 +8,7 @@ import 'package:sale_manager/pages/home.dart';
 import 'package:sale_manager/pages/two_factor.dart';
 import 'package:sale_manager/pages/register_entreprise.dart';
 import 'package:sale_manager/session.dart';
+import 'package:sale_manager/cached_credentials.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -18,6 +19,15 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   bool _connexionEnCours = false;
+  List<String> _emailsConnus = [];
+
+  @override
+  void initState() {
+    super.initState();
+    CachedCredentials.emailsConnus().then((emails) {
+      if (mounted) setState(() => _emailsConnus = emails);
+    });
+  }
 
   void loginApp(String email, String password) async {
   setState(() => _connexionEnCours = true);
@@ -65,6 +75,9 @@ class _LoginState extends State<Login> {
 
         if (token != null && token is String && token.isNotEmpty) {
           await Session.save(user);
+          // Mémorise ces identifiants pour permettre une connexion hors-ligne
+          // plus tard, avec les mêmes droits que cette dernière connexion réussie.
+          await CachedCredentials.enregistrer(email, password, user);
 
           Navigator.push(
             context,
@@ -87,9 +100,21 @@ class _LoginState extends State<Login> {
     }
   } catch (e) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Erreur de connexion")),
-    );
+    // Pas de réseau : on tente une reconnaissance avec les identifiants
+    // mémorisés lors d'une précédente connexion réussie.
+    final sessionHorsLigne = await CachedCredentials.tenterConnexionHorsLigne(email, password);
+    if (!mounted) return;
+    if (sessionHorsLigne != null) {
+      await Session.save(sessionHorsLigne);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Connecté en mode hors-ligne (dernières informations connues)")),
+      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => HomePage()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erreur de connexion")),
+      );
+    }
   } finally {
     if (mounted) setState(() => _connexionEnCours = false);
   }
@@ -139,26 +164,39 @@ class _LoginState extends State<Login> {
 
                 SizedBox(height: 20),
 
-                TextFormField(
-                  controller:
-                      _emailController, // associer le controlleur au champ email
-
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: "Email",
-                    hintText: "Enter your email",
-                    prefixIcon: Icon(Icons.mail),
-                    helperText:
-                        "Le mail doit contenir @ et .com (monnom@gmail.com)",
-                    labelStyle: TextStyle(
-                      color: Color.fromARGB(255, 63, 129, 86),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(255, 63, 129, 86),
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue valeur) {
+                    if (valeur.text.isEmpty) return const Iterable<String>.empty();
+                    return _emailsConnus.where((e) => e.toLowerCase().contains(valeur.text.toLowerCase()));
+                  },
+                  onSelected: (String selection) {
+                    _emailController.text = selection;
+                  },
+                  fieldViewBuilder: (context, controleurInterne, focusNode, onFieldSubmitted) {
+                    controleurInterne.addListener(() {
+                      _emailController.text = controleurInterne.text;
+                    });
+                    return TextFormField(
+                      controller: controleurInterne,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Email",
+                        hintText: "Enter your email",
+                        prefixIcon: Icon(Icons.mail),
+                        helperText:
+                            "Le mail doit contenir @ et .com (monnom@gmail.com)",
+                        labelStyle: TextStyle(
+                          color: Color.fromARGB(255, 63, 129, 86),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Color.fromARGB(255, 63, 129, 86),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
                 SizedBox(height: 10),
                 TextFormField(

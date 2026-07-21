@@ -43,6 +43,10 @@ class _OperationsState extends State<Operations> {
 
   //les controlleurs
   final _planteurController=TextEditingController();
+  // Nom réellement tapé par l'acheteur quand le planteur de secours est
+  // utilisé (planteur introuvable localement, saisi hors-ligne). Sert à
+  // créer le vrai planteur au moment de la synchronisation.
+  String? _nomPlanteurSaisi;
   final _prixUnitaireController=TextEditingController();
   final _dateController=TextEditingController();
   final _quantiteController=TextEditingController();
@@ -202,6 +206,7 @@ Future<void> enregistrerAchat(
     'date': dateAchat,
     'idutilisateur': idUtilisateur,
     'uuidClient': OfflineQueue.generateUuid(),
+    'nomPlanteurSaisi': _nomPlanteurSaisi,
   };
   try {
     var url = Uri.parse(
@@ -270,6 +275,7 @@ if (response.statusCode == 200) {
 
 void resetFields(){
   _planteurController.clear();
+  _nomPlanteurSaisi = null;
   _quantiteController.clear();
   _prixUnitaireController.clear();
   _primeController.clear();
@@ -378,9 +384,16 @@ void resetFields(){
   },
   onSelected: (suggestion) {
     final estSecours = suggestion['CodePlanteur'] == 'SECOURS';
-    _planteurController.text = estSecours
-        ? "${suggestion['nomAgriculteur']} (${_planteurController.text.isNotEmpty ? _planteurController.text : 'nom à préciser'})"
-        : suggestion['nomAgriculteur'];
+    // On garde le nom réellement tapé par l'acheteur avant de le remplacer
+    // par l'étiquette du planteur de secours, pour pouvoir créer le vrai
+    // planteur avec ce nom lors de la synchronisation.
+    if (estSecours) {
+      _nomPlanteurSaisi = _planteurController.text.isNotEmpty ? _planteurController.text : null;
+    }
+    // L'achat hors-ligne est enregistré avec le nom "Plant_secours" tel
+    // quel ; le nom réellement tapé reste capturé à part (_nomPlanteurSaisi)
+    // pour compléter le vrai planteur au moment de la synchronisation.
+    _planteurController.text = suggestion['nomAgriculteur'];
     selectedAgriculteurId = suggestion['idAgriculteur'];
     if (estSecours && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

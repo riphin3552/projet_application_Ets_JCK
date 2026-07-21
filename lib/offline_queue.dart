@@ -36,6 +36,18 @@ class OfflineQueue {
     await prefs.setString(_key, jsonEncode(list));
   }
 
+  /// Remplace un achat en attente (ex: après avoir précisé le vrai planteur
+  /// et complété les champs, avant de synchroniser).
+  static Future<void> update(String uuidClient, Map<String, dynamic> nouvellesDonnees) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = await getAll();
+    final index = list.indexWhere((a) => a['uuidClient'] == uuidClient);
+    if (index != -1) {
+      list[index] = nouvellesDonnees;
+      await prefs.setString(_key, jsonEncode(list));
+    }
+  }
+
   static Future<int> count() async {
     return (await getAll()).length;
   }
