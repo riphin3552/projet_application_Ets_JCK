@@ -13,10 +13,13 @@ import 'package:sale_manager/config.dart';
 
 
 class GetAll_Achats extends StatefulWidget {
-  const GetAll_Achats({super.key});
-  
+  // Permet d'arriver directement filtré sur un dépôt (ex: depuis la
+  // synthèse par dépôt du tableau de bord).
+  final int? initialDepotId;
+  const GetAll_Achats({super.key, this.initialDepotId});
 
-   
+
+
   @override
   State<GetAll_Achats> createState() {
     return _GetAll_AchatsState();
@@ -40,11 +43,12 @@ class _GetAll_AchatsState extends State<GetAll_Achats> {
   @override
   void initState() {
     super.initState();
+    selectedDepotId = widget.initialDepotId;
     loadAchats();
     fetchDepots();
     //fetchAchats();
     _searchController.addListener(() {
-      
+
     });
   }
 

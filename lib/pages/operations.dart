@@ -417,8 +417,16 @@ void resetFields(){
                       child: Text(item['designationProduit']), // texte affiché
                     );
                   } ).toList(),
-                onChanged: (newproduit) { 
-                  selectedProduitId=newproduit;
+                onChanged: (newproduit) {
+                  setState(() {
+                    selectedProduitId = newproduit;
+                    // Le prix vient du produit et n'est jamais saisi à la main ici.
+                    final produit = produits.firstWhere(
+                      (p) => p['IdProduit'] == newproduit,
+                      orElse: () => {},
+                    );
+                    _prixUnitaireController.text = (produit['Prix'] ?? '').toString();
+                  });
                 },
                 decoration: InputDecoration(
                   labelText: "selectionne un produit",
@@ -453,17 +461,24 @@ void resetFields(){
                 ),
                 
                 Padding(padding: EdgeInsets.all(10),
-                  child: 
+                  child:
                     TextFormField(
                   controller: _prixUnitaireController,
+                  readOnly: true, // Prix fixé par le produit ; modifiable uniquement dans l'écran Produits.
                   decoration: InputDecoration(
                     labelText: "Prix Unitaire (FC)",
                     labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
-                    hintText: "saisir le prix unitaire",
+                    hintText: "Déterminé par le produit sélectionné",
                     prefixIcon: Icon(Icons.price_change),
                     border: OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color.fromARGB(255, 63, 129, 86)))
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Sélectionnez d'abord un produit";
+                    }
+                    return null;
+                  },
                 ),
                 ),
                 

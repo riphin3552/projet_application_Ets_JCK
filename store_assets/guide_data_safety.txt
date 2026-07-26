@@ -1,0 +1,41 @@
+GUIDE POUR LE FORMULAIRE "SÉCURITÉ DES DONNÉES" DE PLAY CONSOLE
+(Play Console > Contenu de l'app > Sécurité des données)
+
+Ce formulaire pose une série de questions. Voici les réponses correspondant
+à ce que fait réellement l'application.
+
+1. "Votre application collecte-t-elle ou partage-t-elle des types de
+   données utilisateur ?" → OUI
+
+2. Types de données à cocher :
+   - Informations personnelles > Nom → Oui (collectée, nécessaire au
+     fonctionnement du compte, non partagée avec des tiers)
+   - Informations personnelles > Adresse e-mail → Oui (identifiant de
+     connexion, non partagée)
+   - Informations financières > Autres informations financières → Oui
+     (montants des achats/paiements enregistrés par l'utilisateur pour le
+     compte de l'entreprise, non partagées avec des tiers)
+   - Aucune donnée de localisation
+   - Aucune photo/vidéo, aucun contact du répertoire téléphonique
+   - Aucun identifiant publicitaire
+
+3. Pour chaque type de donnée coché, répondre :
+   - Collectée : Oui
+   - Partagée avec des tiers : Non
+   - Traitement : "Chiffrée en transit" → Oui (HTTPS)
+   - Les utilisateurs peuvent-ils demander la suppression de leurs
+     données ? → Oui (l'administrateur de l'entreprise peut supprimer un
+     compte utilisateur ; email de contact : heririphin@gmail.com)
+   - Cette donnée est-elle facultative ou obligatoire ? → Obligatoire
+     (nécessaire pour utiliser l'application)
+   - Finalité : "Fonctionnalité de l'application" (pas "Publicité",
+     pas "Analyse")
+
+4. "Votre application est-elle conforme à la Politique Google Play
+   relative aux Familles ?" → Non concerné, l'app n'est pas destinée aux
+   enfants (cocher "Cette application ne s'adresse pas principalement aux
+   enfants")
+
+5. URL de la politique de confidentialité à renseigner dans Play Console :
+   celle où vous aurez hébergé le fichier politique_confidentialite.html
+   (voir instructions dans le message).

@@ -23,6 +23,7 @@ import 'package:sale_manager/pages/export_csv.dart';
 import 'package:sale_manager/pages/securite_2fa.dart';
 import 'package:sale_manager/pages/changer_mot_de_passe.dart';
 import 'package:sale_manager/pages/synchronisation.dart';
+import 'package:sale_manager/pages/entreprise_info.dart';
 import 'package:sale_manager/session.dart';
 import 'package:sale_manager/config.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -41,7 +42,6 @@ class _HomePageState extends State<HomePage> {
   String nomUtilisateur='';
   String statusUser="";
   List<String> _permissions = [];
-  bool get isConnected=>nomUtilisateur.trim().isNotEmpty;
   bool _can(String permission) => _permissions.contains(permission);
 
   @override
@@ -210,7 +210,7 @@ void sendEmailMultiplatform() async {
       appBar: AppBar(
         
         title: const Text(
-          'Home Page',
+          'Accueil',
           style: TextStyle(
             color: Color.fromARGB(255, 248, 249, 249),
             fontWeight: FontWeight.bold,
@@ -225,7 +225,7 @@ void sendEmailMultiplatform() async {
     onSelected: (value) {
       // L'accès est déjà garanti par le filtrage des options ci-dessous
       // (chaque entrée n'apparaît que si l'utilisateur a le privilège requis).
-      if (value == 'Operations') {
+      if (value == 'Toutes les opérations') {
         Navigator.push(context, MaterialPageRoute(builder: (context) => GetAll_Achats()));
       } else if (value == 'Tous les Stocks') {
         Navigator.push(context, MaterialPageRoute(builder: (context) => StockProduits()));
@@ -235,7 +235,7 @@ void sendEmailMultiplatform() async {
     },
     itemBuilder: (BuildContext context) {
       final options = <String>[
-        if (_can('achats.voir')) 'Operations',
+        if (_can('achats.voir')) 'Toutes les opérations',
         if (_can('depots.voir')) 'Tous les Stocks',
         if (_can('utilisateurs.voir')) 'Utilisateurs',
       ];
@@ -258,34 +258,8 @@ void sendEmailMultiplatform() async {
               currentAccountPicture: CircleAvatar(
                 backgroundImage: AssetImage("images/etsJCK.jpg"),
               ),
-              
-              accountName: Text("$nomUtilisateur"), 
-              accountEmail: Text(""),
-              otherAccountsPictures: [
-                
-                SizedBox(
-                  height: 50,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      
-                      Transform.scale(
-                        scale: 0.8,
-                        child: Switch( value: isConnected, 
-                        
-                        activeThumbColor: Colors.green,
-                        inactiveThumbColor: Colors.grey,
-                        onChanged: (value){
-                            setState(() {
-                              nomUtilisateur=value? "$nomUtilisateur":"Deconnecté"; 
-                              
-                            });
-                        }),
-                      )
-                    ],
-                  ),
-                )
-              ],
+              accountName: Text("$nomUtilisateur"),
+              accountEmail: null,
             ),
             
             ListTile(title: Text("Parametres"), leading: Icon(Icons.settings)),
@@ -362,7 +336,7 @@ void sendEmailMultiplatform() async {
             children: [
               Icon(Icons.person_add),
               SizedBox(height: 8),
-              Text("Add User", textAlign: TextAlign.center),
+              Text("Ajouter utilisateur", textAlign: TextAlign.center),
             ],
           ),
           ),
@@ -396,7 +370,7 @@ void sendEmailMultiplatform() async {
                 children: [
                   Icon(Icons.agriculture),
                   SizedBox(height: 8),
-                  Text("Add Planteur", textAlign: TextAlign.center),
+                  Text("Ajouter planteur", textAlign: TextAlign.center),
                 ],
           ),
         ),
@@ -428,7 +402,7 @@ void sendEmailMultiplatform() async {
                 children: [
                   Icon(Icons.store_mall_directory),
                   SizedBox(height: 8),
-                  Text("Add store", textAlign: TextAlign.center),
+                  Text("Ajouter dépôt", textAlign: TextAlign.center),
                 ],
           ),
           ),
@@ -461,7 +435,7 @@ void sendEmailMultiplatform() async {
                   children: [
                     Icon(Icons.add_box),
                     SizedBox(height: 8),
-                    Text("Add Product", textAlign: TextAlign.center),
+                    Text("Ajouter produit", textAlign: TextAlign.center),
                   ],
           ),
           ),
@@ -494,7 +468,7 @@ void sendEmailMultiplatform() async {
                 children: [
                   Icon(Icons.shopping_cart),
                   SizedBox(height: 8),
-                  Text("Add\n Purchase", textAlign: TextAlign.center),
+                  Text("Nouvel\n achat", textAlign: TextAlign.center),
                 ],
                 ),
           ),
@@ -526,7 +500,7 @@ void sendEmailMultiplatform() async {
                   children: [
                     Icon(Icons.shopping_bag),
                     SizedBox(height: 8),
-                    Text("Purchases", textAlign: TextAlign.center),
+                    Text("Achats", textAlign: TextAlign.center),
                   ],)
           ),
           ),
@@ -557,7 +531,7 @@ void sendEmailMultiplatform() async {
                 children: [
                   Icon(Icons.storage),
                   SizedBox(height: 8),
-                  Text("Products stock", textAlign: TextAlign.center),
+                  Text("Stock produits", textAlign: TextAlign.center),
                 ]
                 ),
           ),
@@ -598,6 +572,7 @@ void sendEmailMultiplatform() async {
           if (_can('inventaires.voir')) _tile(Icons.fact_check, "Inventaire", () => const InventairePage()),
           if (_can('notifications.voir')) _tile(Icons.notifications, "Notifications", () => const NotificationsPage()),
           if (_can('rapports.voir')) _tile(Icons.dashboard, "Tableau de bord", () => const DashboardPage()),
+          if (_can('entreprises.gerer')) _tile(Icons.business, "Entreprise", () => const EntrepriseInfoPage()),
           if (_can('export.voir')) _tile(Icons.file_download, "Export CSV", () => const ExportCsvPage()),
           _tile(Icons.security, "Sécurité (2FA)", () => const Securite2FAPage()),
           _tile(Icons.password, "Mot de passe", () => const ChangerMotDePassePage()),

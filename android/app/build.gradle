@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace "com.example.sale_manager"
+    namespace "com.etsjck.salemanager"
     compileSdk flutter.compileSdkVersion
     ndkVersion "28.2.13676358"
 
@@ -36,7 +36,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.riphin_salemanager.Ets_JCK"
+        applicationId "com.etsjck.salemanager"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutter.versionCode

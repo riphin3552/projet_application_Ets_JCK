@@ -17,10 +17,12 @@ class EXPEDICTION extends StatefulWidget {
 
 class _EXPEDICTIONState extends State<EXPEDICTION> {
   int? selectedProduitId;
-  
+  int? selectedDepotDestinationId;
+
   List<Map<String, dynamic>> produits = [];
+  List<Map<String, dynamic>> depotsDestination = [];
   int? IdDepot;
-  
+
 
   final _formKey = GlobalKey<FormState>();
   final _dateExpeditionController = TextEditingController();
@@ -41,6 +43,21 @@ class _EXPEDICTIONState extends State<EXPEDICTION> {
     }
   }
 
+  // Tous les dépôts de l'entreprise, pour choisir la destination du
+  // transfert (jamais limité au seul dépôt de l'utilisateur connecté).
+  Future<void> fetchDepotsDestination() async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/get_depots_expedition.php'),
+      headers: await Session.authHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      setState(() {
+        depotsDestination = List<Map<String, dynamic>>.from(data);
+      });
+    }
+  }
+
   // Le dépôt de l'utilisateur connecté est déjà connu depuis la connexion.
   void loadIdepot() async {
     final idDepot = await Session.getIdStockage();
@@ -55,9 +72,10 @@ Future<void> saveExpedition(
   String dateExpedition,
   int? selectedProduitId,
   int? idDepot,
+  int? idDepotDestination,
   int quantite,
   String transporteur,
-  
+
 ) async {
   try{
   final response = await http.post(
@@ -67,9 +85,10 @@ Future<void> saveExpedition(
       'dateExpedition': dateExpedition,
       'idproduit': selectedProduitId,
       'iddepot': idDepot,
+      'iddepotDestination': idDepotDestination,
       'quantite': quantite,
       'transporteur': transporteur,
-      
+
     }),
   );
 
@@ -125,6 +144,7 @@ Future<void> saveExpedition(
   void initState() {
     super.initState();
     fetchProduits();
+    fetchDepotsDestination();
     loadIdepot();
   }
 
@@ -132,6 +152,7 @@ void resetFieldsExpedition(){
     _dateExpeditionController.clear();
     _quantiteController.clear();
     _transporteurController.clear();
+    setState(() => selectedDepotDestinationId = null);
   }
   @override
   Widget build(BuildContext context) {
@@ -236,7 +257,39 @@ void resetFieldsExpedition(){
                         value: selectedProduitId,
                     ),
                   ),
-                  
+
+                    Padding(padding: EdgeInsets.all(8),
+                      child: DropdownButtonFormField<int>(
+                        decoration: InputDecoration(
+                          labelText: 'Dépôt de destination',
+                          labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
+                          border: OutlineInputBorder(),
+                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color.fromARGB(255, 63, 129, 86)))
+                        ),
+                        items: depotsDestination
+                            .where((depot) => depot['IdStockage'] != IdDepot)
+                            .map((depot) {
+                          return DropdownMenuItem<int>(
+                            value: depot['IdStockage'],
+                            child: Text(depot['CodeDepot']),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedDepotDestinationId = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return "Veuillez sélectionner le dépôt qui recevra ce produit";
+                          }
+                          return null;
+                        },
+                        // ignore: deprecated_member_use
+                        value: selectedDepotDestinationId,
+                    ),
+                  ),
+
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: TextFormField(
@@ -275,10 +328,11 @@ void resetFieldsExpedition(){
                     // Soumettre le formulaire
                    
                     saveExpedition(
-                      _dateExpeditionController.text, 
-                      selectedProduitId, 
+                      _dateExpeditionController.text,
+                      selectedProduitId,
                       IdDepot,
-                      int.parse(_quantiteController.text), 
+                      selectedDepotDestinationId,
+                      int.parse(_quantiteController.text),
                       _transporteurController.text
                       );
                     

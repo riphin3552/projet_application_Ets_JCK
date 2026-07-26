@@ -1,0 +1,16 @@
+Ets JCK Sale Manager est l'application interne de gestion des achats de produits agricoles (cacao, café, macadamia) pour les acheteurs, caissiers, comptables et directeurs de Ets JCK.
+
+FONCTIONNALITÉS PRINCIPALES
+- Enregistrement des achats auprès des planteurs, avec calcul automatique du prix total et de la prime
+- Génération et impression du bon d'achat (ticket) directement sur imprimante thermique Bluetooth
+- Suivi des paiements : paiement partiel ou intégral, avec visibilité claire sur ce qui est payé et ce qui reste dû
+- Gestion multi-dépôts : chaque acheteur ne voit que le dépôt qui lui est affecté ; la direction, la caisse et la comptabilité ont une vue sur l'ensemble de l'entreprise
+- Traçabilité par lots et fiche de stock par dépôt (entrées, sorties, transferts entre dépôts)
+- Expéditions inter-dépôts avec mise à jour automatique du stock source et destination
+- Tableau de bord avec synthèse des achats par dépôt et historique des prix
+- Fonctionnement hors-ligne sur le terrain : les achats saisis sans connexion sont mis en file d'attente et synchronisés automatiquement dès que le réseau revient, avec vérification de l'identité réelle des planteurs avant l'envoi
+- Connexion possible hors-ligne avec les derniers identifiants utilisés sur l'appareil
+- Gestion des rôles et des privilèges par utilisateur
+- Authentification à deux facteurs pour les comptes sensibles (direction, comptabilité)
+
+Cette application est réservée aux utilisateurs disposant d'un compte fourni par leur entreprise. Elle ne s'adresse pas au grand public.

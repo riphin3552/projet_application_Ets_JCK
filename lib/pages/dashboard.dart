@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:sale_manager/session.dart';
 import 'package:sale_manager/config.dart';
+import 'package:sale_manager/pages/GetAll_Achats.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -122,6 +123,13 @@ class _DashboardPageState extends State<DashboardPage> {
                       "Achats: ${d['nombreAchats']} • Volume: ${d['volumeAchete']} kg • Prix moyen: ${double.tryParse(d['prixMoyenPondere'].toString())?.toStringAsFixed(1) ?? 0} FC/kg\nMontant: ${d['montantTotal']} FC • Stock actuel: ${d['QuantiteDisponible']} kg",
                     ),
                     isThreeLine: true,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => GetAll_Achats(initialDepotId: d['IdStockage'])),
+                      );
+                    },
                   ),
                 )),
           ],

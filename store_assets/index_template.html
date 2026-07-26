@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ets JCK Sale Manager — Gestion des achats agricoles</title>
+<style>
+  :root {
+    --vert: #3f8156;
+    --vert-fonce: #285a3c;
+    --orange: #e8912d;
+    --fond: #f6f8f6;
+    --texte: #1c2118;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Segoe UI, Arial, sans-serif; color: var(--texte); background: var(--fond); }
+  header {
+    background: linear-gradient(135deg, var(--vert-fonce), var(--vert));
+    color: white; padding: 48px 24px; text-align: center;
+  }
+  header img { width: 96px; height: 96px; border-radius: 20px; background: white; padding: 8px; }
+  header h1 { margin: 16px 0 4px; font-size: 28px; }
+  header p { margin: 0; opacity: 0.9; font-size: 16px; }
+  main { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  h2 { color: var(--vert); font-size: 22px; border-bottom: 2px solid #e0e6e0; padding-bottom: 8px; }
+  .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 20px; }
+  .carte { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .carte h3 { margin: 0 0 8px; color: var(--vert-fonce); font-size: 16px; }
+  .carte p { margin: 0; font-size: 14px; line-height: 1.5; color: #444; }
+  footer { text-align: center; padding: 32px 24px; font-size: 13px; color: #777; }
+  footer a { color: var(--vert); text-decoration: none; margin: 0 10px; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="data:image/png;base64,{{LOGO_BASE64}}" alt="Logo Ets JCK">
+  <h1>Ets JCK Sale Manager</h1>
+  <p>Gestion des achats de cacao, café et macadamia</p>
+</header>
+
+<main>
+  <h2>À propos</h2>
+  <p>Ets JCK Sale Manager est l'application interne utilisée par les acheteurs, caissiers, comptables et directeurs d'Ets JCK pour gérer l'ensemble du cycle d'achat de produits agricoles auprès des planteurs, du terrain jusqu'au dépôt.</p>
+
+  <h2>Fonctionnalités</h2>
+  <div class="grille">
+    <div class="carte">
+      <h3>Achats &amp; bons d'achat</h3>
+      <p>Enregistrement des achats auprès des planteurs, calcul automatique du total et de la prime, impression du bon d'achat sur imprimante thermique Bluetooth.</p>
+    </div>
+    <div class="carte">
+      <h3>Paiements</h3>
+      <p>Paiement intégral ou partiel, avec suivi clair de ce qui est payé et de ce qui reste dû sur chaque achat.</p>
+    </div>
+    <div class="carte">
+      <h3>Multi-dépôts</h3>
+      <p>Chaque acheteur ne voit que le dépôt qui lui est affecté ; la direction, la caisse et la comptabilité ont une vue sur toute l'entreprise.</p>
+    </div>
+    <div class="carte">
+      <h3>Stock &amp; traçabilité</h3>
+      <p>Fiche de stock par dépôt, gestion par lots, et expéditions inter-dépôts avec mise à jour automatique des quantités source et destination.</p>
+    </div>
+    <div class="carte">
+      <h3>Tableau de bord</h3>
+      <p>Synthèse des achats par dépôt, historique des prix, export comptable.</p>
+    </div>
+    <div class="carte">
+      <h3>Fonctionnement hors-ligne</h3>
+      <p>Les achats saisis sans connexion sur le terrain sont mis en file d'attente et synchronisés automatiquement dès que le réseau revient.</p>
+    </div>
+    <div class="carte">
+      <h3>Rôles &amp; permissions</h3>
+      <p>Gestion fine des privilèges par utilisateur, avec authentification à deux facteurs pour les comptes sensibles.</p>
+    </div>
+  </div>
+
+  <h2>Accès</h2>
+  <p>Cette application est réservée aux utilisateurs disposant d'un compte fourni par Ets JCK. Elle n'est pas destinée au grand public.</p>
+</main>
+
+<footer>
+  <div>
+    <a href="/politique_confidentialite.html">Politique de confidentialité</a>
+    <a href="/suppression_compte.html">Suppression du compte</a>
+  </div>
+  <p>© 2026 Ets JCK — Contact : heririphin@gmail.com</p>
+</footer>
+
+</body>
+</html>
