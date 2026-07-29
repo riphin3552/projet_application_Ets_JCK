@@ -74,6 +74,11 @@ class _InventairePageState extends State<InventairePage> {
       );
       _quantitePhysiqueController.clear();
       _commentaireController.clear();
+      setState(() {
+        // Un seul dépôt disponible : on le laisse pré-sélectionné pour la
+        // saisie suivante ; sinon on force un nouveau choix explicite.
+        selectedDepotId = depots.length == 1 ? depots.first['IdStockage'] : null;
+      });
       await fetchInventaires();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Échec')));

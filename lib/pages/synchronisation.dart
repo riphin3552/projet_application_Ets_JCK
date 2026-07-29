@@ -132,6 +132,8 @@ class _SynchronisationPageState extends State<SynchronisationPage> {
       'prixUnitaire': achat['prixUnitaire'],
       'PrimePlanteur': achat['primeplanteur'],
       'totalPayer': achat['totalpayer'],
+      'totalPaye': _paye(achat),
+      'soldeRestant': _reste(achat),
     };
   }
 

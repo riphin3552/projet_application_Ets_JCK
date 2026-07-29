@@ -152,7 +152,10 @@ void resetFieldsExpedition(){
     _dateExpeditionController.clear();
     _quantiteController.clear();
     _transporteurController.clear();
-    setState(() => selectedDepotDestinationId = null);
+    setState(() {
+      selectedDepotDestinationId = null;
+      selectedProduitId = null;
+    });
   }
   @override
   Widget build(BuildContext context) {

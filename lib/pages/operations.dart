@@ -84,11 +84,23 @@ Future<void> fetchDepots() async {
         final donnees = List<Map<String, dynamic>>.from(jsonDecode(response.body));
         await ReferenceCache.save('depots', donnees);
         if (mounted) setState(() => depots = donnees);
+        _preremplirDepot();
         return;
       }
     } catch (_) {}
     final cache = await ReferenceCache.get('depots');
     if (mounted) setState(() => depots = cache);
+    _preremplirDepot();
+}
+
+// Un acheteur restreint ne reçoit qu'un seul dépôt de get_depots.php (le
+// sien) : on le sélectionne automatiquement, en réutilisant directement
+// l'IdStockage renvoyé par le serveur pour être sûr d'enregistrer le même
+// id que celui auquel l'acheteur est réellement affecté.
+void _preremplirDepot() {
+  if (depots.length == 1) {
+    setState(() => selectedDepotId = depots.first['IdStockage']);
+  }
 }
 
 Future<void> fetchProduits() async {
@@ -234,10 +246,11 @@ if (response.statusCode == 200) {
             content: Text('Operations enregisrtée avec succès'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GetAchats(nomUtilisateur: nomUtilisateur,))), 
-                
+                onPressed: () {
+                  Navigator.pop(context); // ferme le dialogue avant de naviguer, sinon il reste empilé sous la liste
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => GetAchats(nomUtilisateur: nomUtilisateur,)));
+                },
                 child: Text('OK'),
-                               
               ),
             ],
           ),
@@ -283,8 +296,8 @@ void resetFields(){
   _dateController.clear();
   selectedAgriculteurId = null;
   selectedProduitId = null;
-  selectedDepotId = null;
-  
+  selectedDepotId = depots.length == 1 ? depots.first['IdStockage'] : null;
+
   _operationFormKey.currentState?.reset();
 
 }
@@ -514,7 +527,7 @@ void resetFields(){
 
                 Padding(padding: EdgeInsets.all(10),
                   child: 
-                    DropdownButtonFormField(
+                    DropdownButtonFormField<int>(
                 // ignore: deprecated_member_use
                 value: selectedDepotId,
                 items: depots.map((item){
@@ -523,12 +536,13 @@ void resetFields(){
                     child: Text(item['CodeDepot']),
                   );
                 }).toList(),
-               onChanged: (newdepot) {
-                  selectedDepotId=newdepot;
+               // Un seul dépôt possible (acheteur restreint) : plus besoin de le retoucher.
+               onChanged: depots.length == 1 ? null : (newdepot) {
+                  setState(() => selectedDepotId = newdepot);
                },
-               
+
                decoration: InputDecoration(
-                  labelText: "selectionne une option...",
+                  labelText: "Dépôt",
                   labelStyle: TextStyle(color: Color.fromARGB(255, 63, 129, 86)),
                   hintText: "Depots",
                   border: OutlineInputBorder(),

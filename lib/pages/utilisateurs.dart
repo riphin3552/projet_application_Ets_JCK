@@ -153,6 +153,10 @@ if (response.statusCode == 200) {
     _descriptionController.clear();
     _passwordController.clear();
     _telephoneUtilisateur.clear();
+    setState(() {
+      selectedDepotId = null;
+      selectedRoleId = null;
+    });
   }
 
   @override

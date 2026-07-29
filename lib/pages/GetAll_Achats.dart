@@ -356,9 +356,7 @@ Widget build(BuildContext context) {
                                             leading: Icon(Icons.edit, color: Colors.blue),
                                             title: Text('Modifier cet achat', style: TextStyle(color: Colors.blue),),
                                             onTap: () {
-                                              // Implémentez la logique de suppression ici
-                    
-                                              //Navigator.pop(context);                // pour fermer le menu contextuel
+                                            Navigator.pop(conttext); // ferme le menu contextuel avant de naviguer
                                             Navigator.push(context, MaterialPageRoute(builder: (context)=>ModifierAchat(achatData: achat)),);
 
                                             },
@@ -368,7 +366,7 @@ Widget build(BuildContext context) {
                                             leading: Icon(Icons.delete, color: Colors.red),
                                             title: Text('Supprimer cet achat', style: TextStyle(color: Colors.red),),
                                             onTap: () {
-                                              // Implémentez la logique de suppression ici
+                                              Navigator.pop(conttext); // ferme le menu contextuel avant de naviguer
                                               Navigator.push(context, MaterialPageRoute(builder: (context)=>DeleteAchat(achatData: achat)),);
                                             },
                                           ),
@@ -386,6 +384,7 @@ Widget build(BuildContext context) {
                                             leading: Icon(Icons.payments, color: Colors.green),
                                             title: Text('Paiements', style: TextStyle(color: Colors.green),),
                                             onTap: () {
+                                              Navigator.pop(conttext); // ferme le menu contextuel avant de naviguer
                                               Navigator.push(context, MaterialPageRoute(builder: (context)=>PaiementsPage(achatData: achat)),);
                                             },
                                           ),

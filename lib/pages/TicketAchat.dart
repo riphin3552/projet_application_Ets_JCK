@@ -10,6 +10,7 @@ const PdfColor _encre = PdfColor.fromInt(0xFF1C2118);
 const PdfColor _foret = PdfColor.fromInt(0xFF2B5A3B);
 const PdfColor _filet = PdfColor.fromInt(0xFFBFBBA9);
 const PdfColor _fondEnTete = PdfColor.fromInt(0xFFEFECDF);
+const PdfColor _alerte = PdfColor.fromInt(0xFFB05A1E);
 
 /// Construit le document PDF du reçu (utilisé pour l'aperçu à l'écran et
 /// pour l'impression via une imprimante autre que Bluetooth thermique).
@@ -23,6 +24,12 @@ Future<pw.Document> buildAchatPdf(Map<String, dynamic> achat) async {
   final String numeroBon = (achat['NumeroBon'] ?? '').toString().isNotEmpty
       ? achat['NumeroBon'].toString()
       : 'BON-${achat['Idachat']}';
+
+  final double totalDu = double.tryParse(achat['totalPayer']?.toString() ?? '') ?? 0;
+  final double totalPaye = double.tryParse(achat['totalPaye']?.toString() ?? '') ?? 0;
+  final double soldeRestant = achat['soldeRestant'] != null
+      ? (double.tryParse(achat['soldeRestant'].toString()) ?? (totalDu - totalPaye))
+      : (totalDu - totalPaye);
 
   final String qrPayload = jsonEncode({
     'numeroBon': numeroBon,
@@ -136,16 +143,37 @@ Future<pw.Document> buildAchatPdf(Map<String, dynamic> achat) async {
 
             filet(epaisseur: 1),
 
-            // -------- Total --------
+            // -------- Total / Payé / Reste --------
             pw.Container(
               width: double.infinity,
-              padding: const pw.EdgeInsets.symmetric(vertical: 8),
+              padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               decoration: const pw.BoxDecoration(color: _fondEnTete),
               child: pw.Column(
                 children: [
-                  pw.Text('TOTAL PAYÉ', style: pw.TextStyle(font: fRegular, fontSize: 7, color: _encre, letterSpacing: 1)),
+                  pw.Text('TOTAL', style: pw.TextStyle(font: fRegular, fontSize: 7, color: _encre, letterSpacing: 1)),
                   pw.SizedBox(height: 2),
-                  pw.Text('${achat['totalPayer']} FC', style: pw.TextStyle(font: fBold, fontSize: 14, color: _encre)),
+                  pw.Text('${totalDu.toStringAsFixed(0)} FC', style: pw.TextStyle(font: fBold, fontSize: 14, color: _encre)),
+                  pw.SizedBox(height: 8),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                    children: [
+                      pw.Column(
+                        children: [
+                          pw.Text('PAYÉ', style: pw.TextStyle(font: fRegular, fontSize: 6.5, color: _encre, letterSpacing: 1)),
+                          pw.Text('${totalPaye.toStringAsFixed(0)} FC', style: pw.TextStyle(font: fBold, fontSize: 10, color: _foret)),
+                        ],
+                      ),
+                      pw.Column(
+                        children: [
+                          pw.Text('RESTE', style: pw.TextStyle(font: fRegular, fontSize: 6.5, color: _encre, letterSpacing: 1)),
+                          pw.Text(
+                            '${soldeRestant.toStringAsFixed(0)} FC',
+                            style: pw.TextStyle(font: fBold, fontSize: 10, color: soldeRestant > 0 ? _alerte : _foret),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -164,7 +192,18 @@ Future<pw.Document> buildAchatPdf(Map<String, dynamic> achat) async {
               child: pw.Text('Merci pour votre confiance', style: pw.TextStyle(font: fItalic, fontSize: 8, color: _foret)),
             ),
             pw.SizedBox(height: 18),
-            pw.Text('Signature du planteur :', style: pw.TextStyle(font: fRegular, fontSize: 7.5, color: _encre)),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Text('Signature du planteur :', style: pw.TextStyle(font: fRegular, fontSize: 7.5, color: _encre)),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Expanded(
+                  child: pw.Text('Signature acheteur :', style: pw.TextStyle(font: fRegular, fontSize: 7.5, color: _encre)),
+                ),
+              ],
+            ),
             pw.SizedBox(height: 20),
             filet(),
           ],
