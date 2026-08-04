@@ -21,6 +21,15 @@ class MyApp extends StatelessWidget {
         appBarTheme: AppBarTheme(
           backgroundColor: const Color.fromARGB(255, 34, 146, 238),
         ),
+        // Bordure verte au focus par défaut pour tous les champs de saisie
+        // de l'app, même ceux qui ne définissent pas leur propre focusedBorder.
+        inputDecorationTheme: InputDecorationTheme(
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Color.fromARGB(255, 63, 129, 86), width: 2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          focusColor: const Color.fromARGB(255, 63, 129, 86),
+        ),
       ),
     );
   }

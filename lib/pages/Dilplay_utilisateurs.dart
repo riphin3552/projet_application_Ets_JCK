@@ -23,6 +23,9 @@ class UtilisateursTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      // Défilement vertical : indispensable dès que la liste dépasse la
+      // hauteur de l'écran, sinon les utilisateurs en trop restent inaccessibles.
+      child: SingleChildScrollView(
       scrollDirection: Axis.horizontal, // ✅ scroll horizontal
       child: DataTable(
         columns: const [
@@ -48,6 +51,7 @@ class UtilisateursTable extends StatelessWidget {
             ],
           );
         }).toList(),
+      ),
       ),
     );
   }

@@ -29,6 +29,7 @@ class _ProduitsState extends State<Produits> {
     fetchProduits();
   }
 
+// gestion des permissions pour savoir si l'utilisateur peut gérer les produits
   Future<void> chargerPermission() async {
     final peut = await Session.can('produits.gerer');
     if (mounted) setState(() => peutGerer = peut);

@@ -24,6 +24,8 @@ import 'package:sale_manager/pages/securite_2fa.dart';
 import 'package:sale_manager/pages/changer_mot_de_passe.dart';
 import 'package:sale_manager/pages/synchronisation.dart';
 import 'package:sale_manager/pages/entreprise_info.dart';
+import 'package:sale_manager/pages/wallet.dart';
+import 'package:sale_manager/pages/gestion_wallets.dart';
 import 'package:sale_manager/session.dart';
 import 'package:sale_manager/config.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -41,14 +43,24 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String nomUtilisateur='';
   String statusUser="";
+  String roleUtilisateur='';
   List<String> _permissions = [];
   bool _can(String permission) => _permissions.contains(permission);
+  bool get _aUnWallet => roleUtilisateur == 'Acheteur' || roleUtilisateur == 'Chef de dépôt' || roleUtilisateur == 'Directeur Général';
 
   @override
   void initState(){
     super.initState();
      loadUserName();
      loadPermissions();
+     loadRole();
+  }
+
+  void loadRole() async {
+    final role = await Session.getRole();
+    setState(() {
+      roleUtilisateur = role;
+    });
   }
 
   // L'utilisateur connecté est déjà connu depuis la connexion, inutile de
@@ -111,7 +123,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon),
+            Icon(icon, color: const Color.fromARGB(255, 63, 129, 86)),
             const SizedBox(height: 8),
             Text(label, textAlign: TextAlign.center),
           ],
@@ -290,7 +302,7 @@ void sendEmailMultiplatform() async {
           padding: const EdgeInsets.all(2.0),
           child: Container(
             width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
+            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
             //color: const Color.fromARGB(255, 250, 212, 212),
             decoration: BoxDecoration(
         color: const Color.fromARGB(255, 250, 212, 212),
@@ -300,8 +312,8 @@ void sendEmailMultiplatform() async {
             child: Center(
              
             child: Wrap(
-        spacing: 15, // espace horizontal entre les containers
-        runSpacing: 30, // espace vertical entre les lignes
+        spacing: 12, // espace horizontal entre les containers
+        runSpacing: 14, // espace vertical entre les lignes (réduit pour que plus de tuiles tiennent par écran)
         alignment: WrapAlignment.center,
         
         children: [
@@ -334,7 +346,7 @@ void sendEmailMultiplatform() async {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.person_add),
+              Icon(Icons.person_add, color: Color.fromARGB(255, 63, 129, 86)),
               SizedBox(height: 8),
               Text("Ajouter utilisateur", textAlign: TextAlign.center),
             ],
@@ -368,7 +380,7 @@ void sendEmailMultiplatform() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.agriculture),
+                  Icon(Icons.agriculture, color: Color.fromARGB(255, 63, 129, 86)),
                   SizedBox(height: 8),
                   Text("Ajouter planteur", textAlign: TextAlign.center),
                 ],
@@ -400,7 +412,7 @@ void sendEmailMultiplatform() async {
              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.store_mall_directory),
+                  Icon(Icons.store_mall_directory, color: Color.fromARGB(255, 63, 129, 86)),
                   SizedBox(height: 8),
                   Text("Ajouter dépôt", textAlign: TextAlign.center),
                 ],
@@ -433,7 +445,7 @@ void sendEmailMultiplatform() async {
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_box),
+                    Icon(Icons.add_box, color: Color.fromARGB(255, 63, 129, 86)),
                     SizedBox(height: 8),
                     Text("Ajouter produit", textAlign: TextAlign.center),
                   ],
@@ -466,7 +478,7 @@ void sendEmailMultiplatform() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart),
+                  Icon(Icons.shopping_cart, color: Color.fromARGB(255, 63, 129, 86)),
                   SizedBox(height: 8),
                   Text("Nouvel\n achat", textAlign: TextAlign.center),
                 ],
@@ -498,7 +510,7 @@ void sendEmailMultiplatform() async {
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shopping_bag),
+                    Icon(Icons.shopping_bag, color: Color.fromARGB(255, 63, 129, 86)),
                     SizedBox(height: 8),
                     Text("Achats", textAlign: TextAlign.center),
                   ],)
@@ -529,7 +541,7 @@ void sendEmailMultiplatform() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.storage),
+                  Icon(Icons.storage, color: Color.fromARGB(255, 63, 129, 86)),
                   SizedBox(height: 8),
                   Text("Stock produits", textAlign: TextAlign.center),
                 ]
@@ -562,7 +574,7 @@ void sendEmailMultiplatform() async {
                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.local_shipping),
+                    Icon(Icons.local_shipping, color: Color.fromARGB(255, 63, 129, 86)),
                     SizedBox(height: 8),
                     Text("Expedier", textAlign: TextAlign.center),
                   ],)
@@ -573,6 +585,8 @@ void sendEmailMultiplatform() async {
           if (_can('notifications.voir')) _tile(Icons.notifications, "Notifications", () => const NotificationsPage()),
           if (_can('rapports.voir')) _tile(Icons.dashboard, "Tableau de bord", () => const DashboardPage()),
           if (_can('entreprises.gerer')) _tile(Icons.business, "Entreprise", () => const EntrepriseInfoPage()),
+          if (_aUnWallet) _tile(Icons.account_balance_wallet, "Mon Wallet", () => const WalletPage()),
+          if (_can('wallets.gerer')) _tile(Icons.account_balance, "Gestion Wallets", () => const GestionWalletsPage()),
           if (_can('export.voir')) _tile(Icons.file_download, "Export CSV", () => const ExportCsvPage()),
           _tile(Icons.security, "Sécurité (2FA)", () => const Securite2FAPage()),
           _tile(Icons.password, "Mot de passe", () => const ChangerMotDePassePage()),

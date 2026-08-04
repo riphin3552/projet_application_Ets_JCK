@@ -155,12 +155,17 @@ class _LoginState extends State<Login> {
               children: [
                 SizedBox(height: 60),
 
-                Text(
-                  "Se connecter",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 20),
                 Image.asset("images/etsJCK.jpg", height: 250, width: 300),
+                SizedBox(height: 8),
+                Text(
+                  "Gestion produits agricoles",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color.fromARGB(255, 63, 129, 86),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
 
                 SizedBox(height: 20),
 

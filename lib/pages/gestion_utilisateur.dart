@@ -101,6 +101,48 @@ class _GestionUtilisateurPageState extends State<GestionUtilisateurPage> {
     }
   }
 
+  /// Bloque ou débloque l'accès de cet utilisateur à l'application. Un
+  /// compte bloqué ne peut plus se connecter (déjà vérifié côté serveur à
+  /// chaque requête, pas seulement à la connexion).
+  Future<void> basculerStatut() async {
+    final estActif = (widget.utilisateur['Statut'] ?? 'actif') == 'actif';
+    final nouveauStatut = estActif ? 'inactif' : 'actif';
+
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(estActif ? "Bloquer ce compte ?" : "Débloquer ce compte ?"),
+        content: Text(
+          estActif
+              ? "${widget.utilisateur['nomutilisateur']} ne pourra plus se connecter à l'application, même s'il est déjà connecté."
+              : "${widget.utilisateur['nomutilisateur']} pourra à nouveau se connecter à l'application.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Annuler")),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(estActif ? "Bloquer" : "Débloquer")),
+        ],
+      ),
+    );
+    if (confirme != true) return;
+
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/toggle_user_status.php'),
+      headers: await Session.authHeaders(),
+      body: jsonEncode({
+        'idUtilisateur': widget.utilisateur['Idutilsateur'],
+        'statut': nouveauStatut,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (!mounted) return;
+    if (data['success'] == true) {
+      setState(() => widget.utilisateur['Statut'] = nouveauStatut);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Échec')));
+    }
+  }
+
   Future<void> reinitialiserMotDePasse() async {
     final confirme = await showDialog<bool>(
       context: context,
@@ -236,6 +278,22 @@ class _GestionUtilisateurPageState extends State<GestionUtilisateurPage> {
                   label: const Text("Réinitialiser le mot de passe", style: TextStyle(color: Colors.red)),
                   style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 45), side: const BorderSide(color: Colors.red)),
                 ),
+                const SizedBox(height: 10),
+                Builder(builder: (context) {
+                  final estActif = (widget.utilisateur['Statut'] ?? 'actif') == 'actif';
+                  return OutlinedButton.icon(
+                    onPressed: basculerStatut,
+                    icon: Icon(estActif ? Icons.block : Icons.check_circle, color: estActif ? Colors.red[900] : Colors.green[800]),
+                    label: Text(
+                      estActif ? "Bloquer ce compte" : "Débloquer ce compte",
+                      style: TextStyle(color: estActif ? Colors.red[900] : Colors.green[800]),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 45),
+                      side: BorderSide(color: estActif ? Colors.red[900]! : Colors.green[800]!),
+                    ),
+                  );
+                }),
                 const Divider(height: 40),
                 const Text("Privilèges individuels", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Text("Ajuste les droits de cet utilisateur en plus de ceux de son rôle.", style: TextStyle(fontSize: 12, color: Colors.grey)),

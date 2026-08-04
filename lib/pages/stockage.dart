@@ -18,13 +18,39 @@ class _StockageState extends State<Stockage> {
   final _codeStockageController=TextEditingController();
   final _capacityStockageController=TextEditingController();
   final _stockageDescriptionCOntroller=TextEditingController();
-  // final _QuantityDisponibleController=TextEditingController();
-  
-  // quantityDisponible(){
-  //   _QuantityDisponibleController.text="0";
-  //   int quantiteInitial=int.parse(_QuantityDisponibleController.text);
-  // }
   final FocusNode _focusNodeStockage=FocusNode();
+
+  List<Map<String, dynamic>> depots = [];
+  bool chargement = false;
+  bool peutGerer = false;
+
+  @override
+  void initState() {
+    super.initState();
+    chargerPermission();
+    fetchDepots();
+  }
+
+  Future<void> chargerPermission() async {
+    final peut = await Session.can('depots.gerer');
+    if (mounted) setState(() => peutGerer = peut);
+  }
+
+  Future<void> fetchDepots() async {
+    setState(() => chargement = true);
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/get_depots.php'),
+        headers: await Session.authHeaders(),
+      );
+      if (response.statusCode == 200) {
+        setState(() => depots = List<Map<String, dynamic>>.from(jsonDecode(response.body)));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erreur de connexion")));
+    }
+    if (mounted) setState(() => chargement = false);
+  }
 
   //reinitialiser les chmaps
   void resetFields(){
@@ -72,9 +98,10 @@ if (response.statusCode == 200) {
               ),
             ],
           ),
-          
+
         );
         resetFieldsStorage(); // Réinitialise les champs après l'enregistrement
+        fetchDepots();
       }
     });
   } else {
@@ -96,9 +123,9 @@ if (response.statusCode == 200) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Erreur de connexion")));
-      
+
   }
-  
+
 }
 
 //reinitialiser les chmaps
@@ -108,6 +135,90 @@ void resetFieldsStorage(){
     _stockageDescriptionCOntroller.clear();
   }
 
+  /// Ouvre un formulaire pré-rempli pour modifier un dépôt existant.
+  Future<void> modifierDepot(Map<String, dynamic> depot) async {
+    final codeController = TextEditingController(text: depot['CodeDepot'] ?? '');
+    final capaciteController = TextEditingController(text: (depot['CapaciteStockage_KG'] ?? '').toString());
+    final seuilController = TextEditingController(text: (depot['SeuilAlerteKG'] ?? '').toString());
+    final descriptionController = TextEditingController(text: depot['DescriptionStockage'] ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Modifier le dépôt"),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: codeController,
+                  decoration: const InputDecoration(labelText: "Code dépôt", border: OutlineInputBorder()),
+                  validator: (v) => (v == null || v.isEmpty) ? "Requis" : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: capaciteController,
+                  decoration: const InputDecoration(labelText: "Capacité (kg)", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: seuilController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Seuil d'alerte (kg)", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: descriptionController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Annuler")),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) Navigator.pop(context, true);
+            },
+            child: const Text("Enregistrer"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirme != true) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/update_depot.php'),
+        headers: await Session.authHeaders(),
+        body: jsonEncode({
+          'idStockage': depot['IdStockage'],
+          'codeDepot': codeController.text,
+          'capacite': capaciteController.text,
+          'seuilAlerte': seuilController.text,
+          'description': descriptionController.text,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      if (!mounted) return;
+      if (data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Dépôt mis à jour")));
+        await fetchDepots();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Échec de la mise à jour')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erreur de connexion")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,12 +226,13 @@ void resetFieldsStorage(){
         backgroundColor: Color.fromARGB(255, 63, 129, 86),
         title: Text("Stockage",style: TextStyle(color: Colors.white),),
       ),
-      
-      body: Center(
+
+      body: RefreshIndicator(
+        onRefresh: fetchDepots,
         child: SingleChildScrollView(
           padding: EdgeInsets.all(20),
-          child: Center(
-             child: Form(
+          child:
+             Form(
               key: _formKeyStockage,
               child: Column(
                 children: [
@@ -133,7 +245,7 @@ void resetFieldsStorage(){
                   SizedBox(height: 20,),
 
                     Padding(padding: EdgeInsets.all(10),
-                      child: 
+                      child:
                         TextFormField(
                     focusNode: _focusNodeStockage,
                     controller: _codeStockageController,
@@ -149,7 +261,7 @@ void resetFieldsStorage(){
                     ),
 
                     Padding(padding: EdgeInsets.all(10),
-                    child: 
+                    child:
                       TextFormField(
                     controller: _stockageDescriptionCOntroller,
                     maxLines: 2,
@@ -165,7 +277,7 @@ void resetFieldsStorage(){
                     ),
 
                     Padding(padding: EdgeInsets.all(10),
-                      child: 
+                      child:
                         TextFormField(
                     controller: _capacityStockageController,
                     decoration: InputDecoration(
@@ -178,9 +290,9 @@ void resetFieldsStorage(){
                     ),
                   ),
                     ),
-                  
+
                     Padding(padding: EdgeInsets.all(10),
-                      child: 
+                      child:
                         TextFormField(
                     //controller: _QuantityDisponibleController,
                     readOnly: true,
@@ -194,8 +306,8 @@ void resetFieldsStorage(){
                     ),
                   ),
                     ),
-                  
-                                    
+
+
                     Padding(padding: EdgeInsets.all(10),
                       child: ElevatedButton(onPressed: (){
                       addStorage(
@@ -212,16 +324,40 @@ void resetFieldsStorage(){
                   ),
                    child: Text("Ajouter",style: TextStyle(color: Colors.white),))
                     ),
-        
-                  
-                  
+
+
+
                       ],
                     ),
-                  )
+                  ),
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text("Liste des dépôts", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  ),
+                  const SizedBox(height: 8),
+                  if (chargement) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()),
+                  if (!chargement && depots.isEmpty) const Text("Aucun dépôt enregistré"),
+                  ...depots.map((d) => Card(
+                        child: ListTile(
+                          title: Text(d['CodeDepot'] ?? ''),
+                          subtitle: Text(
+                            "Capacité : ${d['CapaciteStockage_KG'] ?? '—'} kg • Seuil alerte : ${d['SeuilAlerteKG'] ?? '—'} kg\n"
+                            "Stock actuel : ${d['QuantiteDisponible'] ?? 0} kg"
+                            "${(d['DescriptionStockage'] ?? '').toString().isNotEmpty ? '\n${d['DescriptionStockage']}' : ''}",
+                          ),
+                          isThreeLine: true,
+                          trailing: peutGerer
+                              ? IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                                  onPressed: () => modifierDepot(d),
+                                )
+                              : null,
+                        ),
+                      )),
             ],)),
           )
         ),
-      ),
-    );
+      );
   }
 }
